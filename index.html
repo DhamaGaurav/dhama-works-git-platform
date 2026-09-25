@@ -1,0 +1,1656 @@
+<title>Dhama Works Git Platform</title>
+<style>
+:root{
+  --bg:#F7F8F9; --surface:#FFFFFF; --surface-2:#EEF0F5; --border:#DFE3EA;
+  --text:#1B1E27; --text-2:#565D6D; --text-3:#8990A0;
+  --accent:#5B5FEF; --accent-soft:#EDEDFD;
+  --good:#1F9D63; --good-soft:#E4F6EC;
+  --recent:#1E8FA8; --recent-soft:#E3F3F6;
+  --warn:#C97A1F; --warn-soft:#FBEDDB;
+  --crit:#D14343; --crit-soft:#FBE4E4;
+  --lane0:#5B5FEF; --lane1:#B24FE0; --lane2:#E0538E; --lane3:#2FADC9; --lane4:#E0A23A;
+  --shadow: 0 1px 2px rgba(23,26,38,0.06), 0 8px 24px -12px rgba(23,26,38,0.18);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12141B; --surface:#1A1D27; --surface-2:#20232F; --border:#2C3040;
+    --text:#EAECF2; --text-2:#A6ACBC; --text-3:#767E92;
+    --accent:#8B8FFF; --accent-soft:#262A47;
+    --good:#3FC886; --good-soft:#16301F;
+    --recent:#4FC1DE; --recent-soft:#132A33;
+    --warn:#E8A23F; --warn-soft:#332508;
+    --crit:#F0716D; --crit-soft:#3A1817;
+    --lane0:#8B8FFF; --lane1:#D08CF0; --lane2:#F084AF; --lane3:#5FCBE0; --lane4:#F0BE66;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12141B; --surface:#1A1D27; --surface-2:#20232F; --border:#2C3040;
+  --text:#EAECF2; --text-2:#A6ACBC; --text-3:#767E92;
+  --accent:#8B8FFF; --accent-soft:#262A47;
+  --good:#3FC886; --good-soft:#16301F;
+  --recent:#4FC1DE; --recent-soft:#132A33;
+  --warn:#E8A23F; --warn-soft:#332508;
+  --crit:#F0716D; --crit-soft:#3A1817;
+  --lane0:#8B8FFF; --lane1:#D08CF0; --lane2:#F084AF; --lane3:#5FCBE0; --lane4:#F0BE66;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+  color-scheme: dark;
+}
+*{box-sizing:border-box;}
+html,body{height:100%; margin:0;}
+html{background:var(--bg);}
+body{
+  background:var(--bg) !important; color:var(--text);
+  font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;}
+/* The page itself never scrolls — only bounded regions inside it (the
+   History panel's row list, the branch drawer body, etc.) get their own
+   overflow. .wrap is the flex column that fills the viewport height and
+   hands the remaining space to .grid/.panel below; changing this back to a
+   plain block layout brings back page-level scrolling. */
+.wrap{
+  max-width:1180px; width:100%; margin:0 auto; flex:1; min-height:0;
+  display:flex; flex-direction:column; overflow:hidden;
+  padding-inline:20px; padding-block:24px 20px;
+}
+
+/* header */
+header.top{display:flex; flex-direction:column; gap:14px; margin-bottom:22px; flex:none;}
+.eyebrow{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent);}
+h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
+.subtitle{color:var(--text-2); font-size:13.5px; margin-top:4px;}
+.subtitle .mono{color:var(--text-3);}
+/* topBar: title block + controls, side by side. The controls (repo picker,
+   refresh, settings, branch count) must stay pinned in the same spot no
+   matter how long the repo/title text is — nowrap + ellipsis on the title
+   instead of letting the whole row wrap, which used to shove the controls
+   onto their own line for some repos but not others. Only true narrow
+   viewports stack the two blocks, via the media query below. */
+.topBar{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:nowrap;}
+.topBar .titleBlock{min-width:0; flex:1 1 auto; overflow:hidden;}
+.topBar .titleBlock h1{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.topBar .titleBlock .subtitle{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+@media (max-width:640px){
+  .topBar{flex-wrap:wrap;}
+  .topBar .titleBlock{flex-basis:100%; overflow:visible;}
+  .topBar .titleBlock h1, .topBar .titleBlock .subtitle{white-space:normal; overflow:visible; text-overflow:clip;}
+}
+
+.stats{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;}
+.stat{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:10px 14px; min-width:104px; box-shadow:var(--shadow);
+}
+.stat .n{font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums;}
+.stat .l{font-size:11px; color:var(--text-2); margin-top:3px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+.stat.active .n{color:var(--good);} .stat.recent .n{color:var(--recent);}
+.stat.aging .n{color:var(--warn);} .stat.stale .n{color:var(--crit);}
+.stat.flag .n{color:var(--accent);}
+
+.grid{display:flex; flex-direction:column; flex:1; min-height:0;}
+
+.drawerBtn{
+  display:inline-flex; align-items:center; gap:7px;
+  background:var(--surface); border:1px solid var(--border); color:var(--text);
+  font-size:12.5px; font-weight:700; padding:8px 13px; border-radius:10px; cursor:pointer;
+  box-shadow:var(--shadow);
+}
+.drawerBtn .n{font-family:'JetBrains Mono',monospace; color:var(--accent);}
+.drawerBtn:hover{border-color:var(--accent);}
+
+.backdrop{
+  position:fixed; inset:0; background:rgba(10,12,18,.38); z-index:50;
+  opacity:0; pointer-events:none; transition:opacity .18s ease;
+}
+.backdrop.show{opacity:1; pointer-events:auto;}
+
+.drawer{
+  position:fixed; top:0; right:0; bottom:0; width:400px; max-width:92vw; z-index:51;
+  background:var(--surface); border-left:1px solid var(--border);
+  box-shadow:-16px 0 40px -20px rgba(10,12,18,.4);
+  display:flex; flex-direction:column;
+  transform:translateX(100%); transition:transform .2s ease;
+}
+.drawer.show{transform:translateX(0);}
+.drawer .dhead{
+  padding:14px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.drawer .dhead h2{font-size:13px; margin:0; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2);}
+.drawerClose{
+  background:var(--surface-2); border:1px solid var(--border); color:var(--text-2);
+  width:26px; height:26px; border-radius:8px; cursor:pointer; font-size:14px; line-height:1;
+}
+.drawerClose:hover{color:var(--text);}
+.drawer .dbody{overflow-y:auto; padding:12px 16px 20px;}
+.drawer .stats{margin-top:0;}
+
+.panel{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column;
+  flex:1; min-height:0;
+}
+.panel > .phead{
+  padding:12px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
+  flex:none;
+}
+.panel > .phead h2{font-size:13px; margin:0; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2);}
+
+.filters{display:flex; gap:6px; flex-wrap:wrap;}
+/* Committer filter: a horizontally-scrolling strip, never wraps — with
+   more than a couple of authors, letting these wrap onto extra lines would
+   push the graph down and shift things around every time the filter
+   changes, so it scrolls sideways instead and stays a fixed height. */
+.authorFilterRow{
+  display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden;
+  padding:0 16px 8px; flex:none; scrollbar-width:thin;
+}
+.authorFilterRow:empty{padding:0; display:none;}
+.authorFilterRow .chip{flex:none; white-space:nowrap;}
+.authorFilterRow .chip .cnt{opacity:.6; font-weight:500; margin-left:3px;}
+.chip{
+  border:1px solid var(--border); background:var(--surface-2); color:var(--text-2);
+  font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:999px; cursor:pointer;
+  user-select:none; transition:transform .1s ease;
+}
+.chip:hover{transform:translateY(-1px);}
+.chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff;}
+.chip.dot::before{content:''; display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; background:currentColor;}
+
+/* branch list */
+#branchList{max-height:78vh; overflow-y:auto; padding:8px;}
+.bcard{
+  border:1px solid transparent; border-radius:10px; padding:10px 10px; cursor:pointer;
+  display:flex; flex-direction:column; gap:6px; margin-bottom:2px;
+}
+.bcard:hover{background:var(--surface-2);}
+.bcard.selected{background:var(--accent-soft); border-color:var(--accent);}
+.bcard .row1{display:flex; align-items:center; gap:8px;}
+.tierdot{width:8px; height:8px; border-radius:50%; flex:none;}
+.tierdot.active{background:var(--good);} .tierdot.recent{background:var(--recent);}
+.tierdot.aging{background:var(--warn);} .tierdot.stale{background:var(--crit);}
+.bname{font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.bmeta{font-size:11px; color:var(--text-3); display:flex; gap:8px; flex-wrap:wrap; padding-left:16px;}
+.badgerow{display:flex; gap:5px; flex-wrap:wrap; padding-left:16px;}
+.badge{font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; letter-spacing:.01em;}
+.badge.merged{background:var(--surface-2); color:var(--text-2);}
+.badge.ahead{background:var(--accent-soft); color:var(--accent);}
+.badge.local{background:var(--surface-2); color:var(--text-3); border:1px dashed var(--border);}
+.badge.rec-safe{background:var(--good-soft); color:var(--good);}
+.badge.rec-needs{background:var(--warn-soft); color:var(--warn);}
+
+/* graph */
+#graphScroll{flex:1; min-height:0; overflow-y:auto; overflow-x:auto; position:relative;}
+#graphInner{position:relative;}
+#laneSvg{position:absolute; top:0; left:0; pointer-events:none;}
+.crow{
+  display:flex; align-items:flex-start; gap:10px; padding:6px 14px 6px 0;
+  border-bottom:1px solid var(--border); position:relative; overflow:hidden;
+}
+.crow:last-child{border-bottom:none;}
+.crow.dim{opacity:.28;}
+/* No negative top margin here: on the very first row there is nothing
+   above it inside #graphScroll to "borrow" that space from, so a negative
+   top margin pushed the highlighted box up into the graph legend/hint bar
+   sitting above the scroll area. Bottom/left/right can still bleed slightly
+   for the highlight's visual inset without causing that overlap. */
+.crow.hi .cbody{background:var(--accent-soft); border-radius:8px; margin:0 -8px -4px -2px; padding:5px 8px 5px 6px;}
+.crow.hasBody{cursor:pointer;}
+.claneCell{flex:none;}
+.cbody{min-width:0; flex:1; padding-top:1px;}
+.csubject{font-size:12.5px; font-weight:600; line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.cmeta{font-size:10.5px; color:var(--text-3); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.ctips{display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;}
+.cExpandBtn{
+  display:inline-flex; align-items:center; gap:3px; margin-left:auto;
+  background:none; border:none; padding:0; cursor:pointer;
+  color:var(--accent); font-size:10.5px; font-weight:700; font-family:inherit;
+}
+.cExpandBtn::before{content:'\25B8'; display:inline-block; transition:transform .15s ease; font-size:9px;}
+.cExpandBtn[aria-expanded="true"]::before{transform:rotate(90deg);}
+.cExpandLbl{display:none;}
+.cExpandBtn:hover .cExpandLbl, .crow.expanded .cExpandLbl{display:inline;}
+/* full commit description — collapsed (display:none) unless this is the
+   one open row; only one row can be .expanded at a time (see toggleExpand),
+   so opening a new commit's description closes whatever was open before. */
+.cdesc{
+  display:none; margin-top:6px; padding:8px 10px; border-radius:8px;
+  background:var(--surface-2); font-size:11.5px; line-height:1.5; color:var(--text-2);
+  white-space:normal; overflow-wrap:anywhere;
+}
+.crow.expanded .cdesc{display:block;}
+.crow.expanded .csubject{white-space:normal; overflow:visible; text-overflow:clip;}
+.tippill{
+  font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; padding:2px 7px;
+  border-radius:999px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-2);
+  cursor:pointer;
+}
+.tippill:hover{border-color:var(--accent); color:var(--accent);}
+
+.hiddenMark{
+  font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; color:var(--text-3);
+  background:var(--surface); border:1px solid var(--border); border-radius:999px;
+  padding:1px 6px; pointer-events:none;
+}
+
+/* branch-focus popup + settings popup share this look */
+.popup{
+  position:fixed; z-index:60; top:50%; left:50%; transform:translate(-50%,-50%) scale(.97);
+  width:520px; max-width:92vw; max-height:82vh;
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  box-shadow:0 24px 60px -20px rgba(10,12,18,.45);
+  display:flex; flex-direction:column; overflow:hidden;
+  opacity:0; pointer-events:none; transition:opacity .16s ease, transform .16s ease;
+}
+.popup.show{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+.popup .phead2{
+  padding:16px 18px; border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+}
+.popup .pname{font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:800; word-break:break-word;}
+.popup .pmeta{font-size:11.5px; color:var(--text-2); margin-top:5px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.popup .pbody{overflow-y:auto; padding:6px 18px 14px; flex:1;}
+.popup .pfoot{padding:12px 18px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;}
+.popup .pnote{font-size:11.5px; color:var(--text-3); padding:10px 0 4px;}
+.btn{
+  font-size:12px; font-weight:700; padding:7px 13px; border-radius:9px; cursor:pointer;
+  border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+.btn.danger{color:var(--crit);}
+.btn:hover{border-color:var(--accent);}
+.pcommit{padding:8px 0; border-bottom:1px solid var(--border);}
+.pcommit:last-child{border-bottom:none;}
+.pcommit .csubject{white-space:normal; overflow:visible; text-overflow:clip;}
+.pcommit.hasBody{cursor:pointer;}
+.pcommit .cdesc{margin-top:6px;}
+.pcommit.expanded .cdesc{display:block;}
+
+.cevent{font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:6px;}
+.cevent .k{width:7px; height:7px; border-radius:50%; flex:none;}
+.cevent.merge .k{background:var(--good);} .cevent.merge{color:var(--good);}
+.cevent.sync .k{background:var(--recent);} .cevent.sync{color:var(--recent);}
+.cevent.update .k{background:var(--warn);} .cevent.update{color:var(--warn);}
+.cevent.revert .k{background:var(--crit);} .cevent.revert{color:var(--crit);}
+.craw{font-size:11px; color:var(--text-3); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.cexplain{font-size:10.5px; color:var(--text-3); font-style:italic; margin-top:2px;}
+.cstart{
+  font-size:11px; font-weight:700; color:var(--accent); margin-bottom:3px;
+  display:flex; align-items:center; gap:5px;
+}
+.cstart .k{width:6px; height:6px; border-radius:50%; background:var(--accent); flex:none;}
+
+/* platform chrome: repo switcher + settings */
+.topRow{display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:none;}
+.repoSelect{
+  font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700;
+  background:var(--surface); border:1px solid var(--border); color:var(--text);
+  padding:8px 30px 8px 13px; border-radius:10px; cursor:pointer; box-shadow:var(--shadow);
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238990A0' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
+.iconBtn{
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--surface); border:1px solid var(--border); color:var(--text-2);
+  width:34px; height:34px; border-radius:10px; cursor:pointer; box-shadow:var(--shadow); font-size:15px;
+}
+.iconBtn:hover{border-color:var(--accent); color:var(--accent);}
+.iconBtn.spin svg{animation:spin 0.9s linear infinite;}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+.settingsRepo{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:9px 10px; border:1px solid var(--border); border-radius:10px; margin-bottom:6px;
+  font-family:'JetBrains Mono',monospace; font-size:12px;
+}
+.settingsField{margin-bottom:14px;}
+.settingsField label{display:block; font-size:11.5px; font-weight:700; color:var(--text-2); margin-bottom:6px; text-transform:uppercase; letter-spacing:.03em;}
+.settingsField input[type="text"], .settingsField input[type="password"]{
+  width:100%; font-family:'JetBrains Mono',monospace; font-size:12.5px;
+  background:var(--surface-2); border:1px solid var(--border); border-radius:9px;
+  padding:9px 11px; color:var(--text);
+}
+.settingsField .hint{font-size:11px; color:var(--text-3); margin-top:6px; line-height:1.5;}
+.addRepoRow{display:flex; gap:6px; margin-top:8px;}
+.addRepoRow input{flex:1;}
+
+.browseRepoRow{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 10px; border-bottom:1px solid var(--border); font-size:12px;
+}
+.browseRepoRow:last-child{border-bottom:none;}
+.browseRepoRow .brname{font-family:'JetBrains Mono',monospace; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.browseRepoRow .brvis{font-size:10px; color:var(--text-3); font-weight:700; text-transform:uppercase; letter-spacing:.03em; flex:none; margin-left:6px;}
+.browseRepoRow .btn{padding:4px 10px; font-size:11px; flex:none;}
+
+.centerState{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:12px; padding:60px 24px; text-align:center; color:var(--text-2); font-size:13px;
+}
+.centerState .big{font-size:15px; font-weight:700; color:var(--text);}
+.spinner{
+  width:22px; height:22px; border-radius:50%; border:2.5px solid var(--border);
+  border-top-color:var(--accent); animation:spin .7s linear infinite;
+}
+.errBox{
+  background:var(--crit-soft); color:var(--crit); border:1px solid var(--crit);
+  border-radius:10px; padding:10px 14px; font-size:12.5px; margin-top:10px; max-width:440px;
+}
+.refreshedNote{font-size:11px; color:var(--text-3);}
+
+footer.note{margin-top:16px; font-size:11.5px; color:var(--text-3); text-align:center; flex:none;}
+footer.note .mono{color:var(--text-3);}
+
+::-webkit-scrollbar{width:10px; height:10px;}
+::-webkit-scrollbar-thumb{background:var(--border); border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <div class="topBar">
+      <div class="titleBlock">
+        <div class="eyebrow">Dhama Works &middot; git platform</div>
+        <h1 id="pageTitle" title="">Branch Map</h1>
+        <div class="subtitle" id="subtitle" title="">Connect a repo to get started.</div>
+      </div>
+      <div class="topRow">
+        <select class="repoSelect" id="repoSelect"></select>
+        <button class="iconBtn" id="refreshBtn" title="Refresh from GitHub">&#8635;</button>
+        <button class="iconBtn" id="openSettings" title="Settings">&#9881;</button>
+        <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="phead">
+        <h2>History</h2>
+        <div class="filters" id="graphModeRow"></div>
+      </div>
+      <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">click a branch to see its history &middot; click a dot for that commit</div>
+      <div class="authorFilterRow" id="authorFilterRow"></div>
+      <div id="graphScroll">
+        <div id="graphInner">
+          <svg id="laneSvg"></svg>
+          <div id="rows"></div>
+          <div id="centerState" class="centerState" style="display:none;"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="branchDrawer">
+    <div class="dhead">
+      <h2>Branches</h2>
+      <button class="drawerClose" id="closeBranches" aria-label="Close">&times;</button>
+    </div>
+    <div class="dbody">
+      <div class="stats" id="statsRow"></div>
+      <div class="filters" id="filterRow" style="margin-top:14px;"></div>
+      <div id="branchList"></div>
+    </div>
+  </aside>
+
+  <div class="backdrop" id="popupBackdrop"></div>
+  <div class="popup" id="branchPopup">
+    <div class="phead2">
+      <div>
+        <div class="pname" id="pName">—</div>
+        <div class="pmeta" id="pMeta"></div>
+      </div>
+      <button class="drawerClose" id="closePopup" aria-label="Close">&times;</button>
+    </div>
+    <div class="pbody" id="pBody"></div>
+    <div class="pfoot">
+      <button class="btn primary" id="pLocate">Show in history</button>
+    </div>
+  </div>
+
+  <!-- settings: GitHub token + tracked repos, all stored only in this browser's localStorage -->
+  <div class="backdrop" id="settingsBackdrop"></div>
+  <div class="popup" id="settingsPopup" style="width:460px;">
+    <div class="phead2">
+      <div>
+        <div class="pname" style="font-family:'Manrope',sans-serif;">Settings</div>
+        <div class="pmeta">GitHub connection for this platform</div>
+      </div>
+      <button class="drawerClose" id="closeSettings" aria-label="Close">&times;</button>
+    </div>
+    <div class="pbody">
+      <div class="settingsField">
+        <label>GitHub personal access token</label>
+        <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off">
+        <div class="hint">Stored only in this browser's local storage. Never sent anywhere except directly to api.github.com, and never saved into this page. A fine-grained token scoped to just the repos below, with Contents: Read-only, is enough.</div>
+      </div>
+      <div class="settingsField">
+        <label>Tracked repositories</label>
+        <div id="repoListSettings"></div>
+        <div class="addRepoRow">
+          <input type="text" id="addRepoInput" placeholder="owner/repo">
+          <button class="btn primary" id="addRepoBtn">Add</button>
+        </div>
+        <div class="hint" id="addRepoErr" style="color:var(--crit); display:none;"></div>
+        <button class="btn" id="browseReposBtn" style="margin-top:10px; width:100%;">Browse my repos&hellip;</button>
+        <div class="hint" id="browseRepoErr" style="color:var(--crit); display:none; margin-top:8px;"></div>
+        <div id="browseRepoPanel" style="display:none; margin-top:10px;">
+          <input type="text" id="browseRepoSearch" placeholder="Filter by name" class="mono"
+            style="width:100%; font-size:12px; background:var(--surface-2); border:1px solid var(--border);
+                   border-radius:9px; padding:8px 10px; color:var(--text); margin-bottom:8px;">
+          <div id="browseRepoList" style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pfoot">
+      <button class="btn" id="saveSettingsBtn">Save &amp; close</button>
+    </div>
+  </div>
+
+  <footer class="note" id="footerNote"></footer>
+</div>
+
+<script>
+const PALETTE = ["#6C8EF5","#F5A25D","#5FC7A3","#E76F8B","#9B8AE6","#4FB6C9","#E8C468","#D97BD4","#7FA9E0","#C97D60"];
+
+// =====================================================================
+// STORAGE — token + tracked repo list + per-repo cached graph data, all
+// kept only in this browser's localStorage. Never sent anywhere except
+// directly from here to api.github.com, and never embedded in the page.
+// =====================================================================
+const Store = (function(){
+  const K_TOKEN = 'ghp_token';
+  const K_REPOS = 'ghp_repos';        // ["owner/repo", ...]
+  const K_LAST  = 'ghp_last_repo';
+  const K_CACHE_PREFIX = 'ghp_cache_'; // + owner/repo -> {data, fetchedAt}
+
+  function safeGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function safeSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+  function safeRemove(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+  return {
+    getToken(){ return safeGet(K_TOKEN) || ''; },
+    setToken(t){ return safeSet(K_TOKEN, t || ''); },
+    getRepos(){ try{ return JSON.parse(safeGet(K_REPOS) || '[]'); }catch(e){ return []; } },
+    setRepos(list){ return safeSet(K_REPOS, JSON.stringify(list)); },
+    getLastRepo(){ return safeGet(K_LAST) || ''; },
+    setLastRepo(r){ return safeSet(K_LAST, r); },
+    getCache(repo){
+      const raw = safeGet(K_CACHE_PREFIX+repo);
+      if(!raw) return null;
+      try{ return JSON.parse(raw); }catch(e){ return null; }
+    },
+    setCache(repo, data){
+      try{
+        return safeSet(K_CACHE_PREFIX+repo, JSON.stringify({data, fetchedAt: new Date().toISOString()}));
+      }catch(e){
+        // localStorage quota exceeded (large repo history) — cache is a nice-to-have,
+        // the page still works, it just refetches from GitHub every time.
+        return false;
+      }
+    },
+    clearCache(repo){ safeRemove(K_CACHE_PREFIX+repo); },
+  };
+})();
+
+// =====================================================================
+// GITHUB — fetch branches + commit history for a repo directly from the
+// browser. api.github.com sends Access-Control-Allow-Origin: * so this
+// works with no proxy. The token never leaves this fetch() call.
+// =====================================================================
+const GitHub = (function(){
+  const API = 'https://api.github.com';
+
+  async function req(pathOrUrl, token){
+    const url = pathOrUrl.startsWith('http') ? pathOrUrl : (API + pathOrUrl);
+    const res = await fetch(url, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(token ? {'Authorization': 'Bearer ' + token} : {}),
+      },
+    });
+    if(!res.ok){
+      let msg = res.status + ' ' + res.statusText;
+      if(res.status === 401) msg = 'GitHub rejected the token (401) — check it\'s correct and not expired.';
+      else if(res.status === 403){
+        const remaining = res.headers.get('x-ratelimit-remaining');
+        msg = remaining === '0'
+          ? 'GitHub API rate limit hit — try again in a few minutes.'
+          : '403 from GitHub — the token may not have access to this repo.';
+      } else if(res.status === 404) msg = 'Repo not found, or the token can\'t see it (404).';
+      const err = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+    return res;
+  }
+
+  function parseNextLink(linkHeader){
+    if(!linkHeader) return null;
+    for(const part of linkHeader.split(',')){
+      const m = part.match(/<([^>]+)>;\s*rel="next"/);
+      if(m) return m[1];
+    }
+    return null;
+  }
+
+  async function getRepoInfo(owner, repo, token){
+    const res = await req(`/repos/${owner}/${repo}`, token);
+    const json = await res.json();
+    return { defaultBranch: json.default_branch, fullName: json.full_name };
+  }
+
+  async function getAllBranches(owner, repo, token){
+    let path = `/repos/${owner}/${repo}/branches?per_page=100`;
+    const out = [];
+    let guard = 0;
+    while(path && guard < 20){
+      guard++;
+      const res = await req(path, token);
+      const json = await res.json();
+      for(const b of json) out.push({ name: b.name, sha: b.commit.sha });
+      path = parseNextLink(res.headers.get('link'));
+    }
+    return out;
+  }
+
+  // Fetches commit history reachable from each branch tip and merges/dedupes
+  // by sha, the browser-side equivalent of `git log --all`. Each GitHub
+  // commit object already carries parent shas, so no extra graph-walking
+  // calls are needed beyond pagination.
+  async function getAllCommits(owner, repo, branchTips, token, onProgress){
+    const seen = new Map(); // sha -> commit dict
+    let branchIdx = 0;
+    for(const tip of branchTips){
+      branchIdx++;
+      if(onProgress) onProgress(`Fetching commit history (${branchIdx}/${branchTips.length} branches)…`);
+      let path = `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(tip)}&per_page=100`;
+      let guard = 0;
+      let hitKnown = false;
+      while(path && guard < 20 && !hitKnown){
+        guard++;
+        const res = await req(path, token);
+        const json = await res.json();
+        for(const c of json){
+          if(seen.has(c.sha)){
+            // this branch's remaining history was already pulled in by a
+            // previous, more complete branch — safe to stop paging early.
+            hitKnown = true;
+            continue;
+          }
+          {
+            const fullMsg = (c.commit && c.commit.message) || '';
+            const nl = fullMsg.indexOf('\n');
+            seen.set(c.sha, {
+              sha: c.sha,
+              parents: (c.parents || []).map(p => p.sha),
+              author: (c.commit && c.commit.author && c.commit.author.name) || 'unknown',
+              date: (c.commit && c.commit.committer && c.commit.committer.date) || (c.commit && c.commit.author && c.commit.author.date),
+              subject: nl === -1 ? fullMsg : fullMsg.slice(0, nl),
+              // everything after the subject line — trimmed of the blank
+              // separator line git conventionally puts between them
+              body: nl === -1 ? '' : fullMsg.slice(nl + 1).replace(/^\n+/, '').trim(),
+            });
+          }
+        }
+        path = parseNextLink(res.headers.get('link'));
+      }
+    }
+    return [...seen.values()];
+  }
+
+  // Lists repos the token's owner can see (own + collaborator + org repos),
+  // for the "browse my repos" picker — so the user doesn't have to know/type
+  // owner/repo by hand. Sorted by most-recently-pushed first.
+  async function getUserRepos(token, onProgress){
+    const out = [];
+    let path = `/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member`;
+    let guard = 0;
+    while(path && guard < 30){
+      guard++;
+      if(onProgress) onProgress(`Loading your repos&hellip; (${out.length} so far)`);
+      const res = await req(path, token);
+      const json = await res.json();
+      for(const r of json){
+        out.push({ full_name: r.full_name, private: !!r.private, pushed_at: r.pushed_at });
+      }
+      path = parseNextLink(res.headers.get('link'));
+    }
+    return out;
+  }
+
+  return { getRepoInfo, getAllBranches, getAllCommits, getUserRepos };
+})();
+
+// =====================================================================
+// GRAPH PIPELINE — ported from build_graph.py (this session's earlier,
+// debugged Python pipeline). Kept as close to that logic as possible,
+// including its two fixed bugs (most-specific-branch commit ownership,
+// and the hidden-commit-count cache being a queue, not overwrite-by-key)
+// so this doesn't reintroduce either one.
+// =====================================================================
+function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
+  const now = new Date(nowISO);
+  const commits = {};
+  commitsRaw.forEach(c => { commits[c.sha] = c; });
+  // newest -> oldest, matching git log's natural order
+  const order = commitsRaw.slice().sort((a,b)=> new Date(b.date) - new Date(a.date)).map(c=>c.sha);
+
+  // No local/remote distinction with a live GitHub connection — GitHub's
+  // branch list is the single source of truth.
+  const uniqueBranches = branchesRaw
+    .filter(b => commits[b.sha])
+    .map(b => ({
+      name: b.name, tip: b.sha,
+      date: commits[b.sha].date, author: commits[b.sha].author,
+    }));
+  const byName = {};
+  uniqueBranches.forEach(b => { byName[b.name] = b; });
+
+  const mainBranch = byName[defaultBranchName];
+  const mainTip = mainBranch ? mainBranch.tip : (uniqueBranches[0] && uniqueBranches[0].tip);
+
+  function ancestors(sha){
+    const seen = new Set(); const stack = [sha];
+    while(stack.length){
+      const s = stack.pop();
+      if(seen.has(s) || !commits[s]) continue;
+      seen.add(s);
+      for(const p of commits[s].parents) stack.push(p);
+    }
+    return seen;
+  }
+
+  const mainAncestors = mainTip ? ancestors(mainTip) : new Set();
+
+  function countAheadBehind(tip){
+    if(tip === mainTip) return [0,0];
+    const tipAnc = ancestors(tip);
+    let ahead = 0; for(const s of tipAnc) if(!mainAncestors.has(s)) ahead++;
+    let behind = 0; for(const s of mainAncestors) if(!tipAnc.has(s)) behind++;
+    return [ahead, behind];
+  }
+
+  for(const b of uniqueBranches){
+    const [ahead, behind] = countAheadBehind(b.tip);
+    b.ahead_of_main = ahead; b.behind_main = behind;
+    b.merged_into_main = (ahead === 0) && mainAncestors.has(b.tip);
+    const dt = new Date(b.date);
+    const days = (now - dt) / 86400000;
+    b.days_stale = Math.round(days*10)/10;
+    let tier;
+    if(days < 2) tier = 'active';
+    else if(days < 7) tier = 'recent';
+    else if(days < 21) tier = 'aging';
+    else tier = 'stale';
+    b.tier = tier;
+    if(b.merged_into_main && (tier==='aging'||tier==='stale') && b.name !== defaultBranchName){
+      b.recommendation = 'safe-to-delete';
+    } else if(!b.merged_into_main && b.ahead_of_main>0 && (tier==='aging'||tier==='stale')){
+      b.recommendation = 'needs-decision';
+    } else {
+      b.recommendation = null;
+    }
+  }
+
+  uniqueBranches.sort((a,b)=> new Date(b.date) - new Date(a.date));
+
+  const refsBySha = {};
+  uniqueBranches.forEach(b=>{ (refsBySha[b.tip] ||= []).push(b.name); });
+
+  const spineRev = [];
+  let cur = mainTip;
+  while(cur){
+    spineRev.push(cur);
+    const ps = commits[cur] ? commits[cur].parents : [];
+    cur = ps.length ? ps[0] : null;
+  }
+  const spine = spineRev.slice().reverse(); // root -> main tip
+  const spineDepth = {}; spine.forEach((s,i)=>{ spineDepth[s]=i; });
+  const spineSet = new Set(spine);
+
+  function commitDict(s){
+    const c = commits[s];
+    return { sha:s, short:s.slice(0,7), author:c.author, subject:c.subject, body:c.body||'', date:c.date,
+      is_merge: c.parents.length>1, refs: refsBySha[s]||[] };
+  }
+
+  // For a branch that's since been merged into main, `tip` is itself now an
+  // ancestor of main_tip — so intersecting tip's ancestors with mainAncestors
+  // is just tip's ancestors in full, and picking the latest-dated entry just
+  // picks tip back out (a self-referential "merge base", which then makes
+  // own_commits compute empty and branched_from point at the branch's own
+  // name). Fix: when we can find the actual merge commit on main that pulled
+  // this exact tip in (a merge commit whose non-first parent is this tip),
+  // search against main's ancestry as it stood *before* that merge instead
+  // of today's full mainAncestors.
+  const mergeCommitForTip = {};
+  mainAncestors.forEach(sha=>{
+    const c = commits[sha];
+    if(c.parents.length > 1){
+      for(let i=1;i<c.parents.length;i++){
+        const p = c.parents[i];
+        if(!(p in mergeCommitForTip)) mergeCommitForTip[p] = sha;
+      }
+    }
+  });
+
+  function mergeBase(tip){
+    const mc = mergeCommitForTip[tip];
+    const baseAncestors = mc ? ancestors(commits[mc].parents[0]) : mainAncestors;
+    const tipAnc = ancestors(tip);
+    let common = null, commonDate = -Infinity;
+    for(const s of tipAnc){
+      if(baseAncestors.has(s)){
+        const d = new Date(commits[s].date).getTime();
+        if(d > commonDate){ commonDate = d; common = s; }
+      }
+    }
+    return common;
+  }
+
+  for(const b of uniqueBranches){
+    const mb = mergeBase(b.tip);
+    const mbAnc = mb ? ancestors(mb) : new Set();
+    const tipAnc = ancestors(b.tip);
+    const own = [...tipAnc].filter(s => !mbAnc.has(s));
+    own.sort((a,c)=> new Date(commits[c].date) - new Date(commits[a].date)); // newest first
+    b.own_commits = own.map(commitDict);
+    b._on_spine = spineSet.has(b.tip);
+    b._had_real_own = own.length > 0;
+  }
+
+  const checkpoints = uniqueBranches.filter(b=>b._on_spine);
+  const byDepth = {};
+  checkpoints.forEach(cp=>{ (byDepth[spineDepth[cp.tip]] ||= []).push(cp); });
+  let prevDepth = -1;
+  Object.keys(byDepth).map(Number).sort((a,b)=>a-b).forEach(d=>{
+    let segDicts = null;
+    for(const cp of byDepth[d]){
+      if(!cp.own_commits.length){
+        if(segDicts === null){
+          segDicts = spine.slice(prevDepth+1, d+1).slice().reverse().map(commitDict);
+        }
+        cp.own_commits = segDicts;
+        // this branch was fast-forwarded straight onto main's spine, so it has
+        // no merge commit of its own — mergeBase(tip) would trivially return
+        // tip itself (self-referential "branched from <own name>"). The real
+        // divergence point for a fast-forwarded segment is the previous
+        // checkpoint on the spine, so mark it here for the branched_from pass
+        // below to use instead of mergeBase.
+        cp._ffBranchedFromSha = prevDepth >= 0 ? spine[prevDepth] : null;
+      }
+    }
+    prevDepth = d;
+  });
+  uniqueBranches.forEach(b=>{ delete b._on_spine; });
+
+  // most-specific-branch commit ownership (fixes the "downstream branch
+  // steals its upstream's commits" misattribution)
+  const branchByName = {}; uniqueBranches.forEach(b=>{ branchByName[b.name]=b; });
+  const commitOwnerCandidates = {};
+  uniqueBranches.forEach(b=>{
+    b.own_commits.forEach(c=>{ (commitOwnerCandidates[c.sha] ||= []).push(b.name); });
+  });
+  const commitOwner = {};
+  Object.keys(commitOwnerCandidates).forEach(sha=>{
+    const names = commitOwnerCandidates[sha];
+    let best = names[0], bestLen = branchByName[best].own_commits.length;
+    for(const nm of names){
+      const len = branchByName[nm].own_commits.length;
+      if(len < bestLen){ best = nm; bestLen = len; }
+    }
+    commitOwner[sha] = best;
+  });
+
+  function ownerOf(sha){
+    if(refsBySha[sha] && refsBySha[sha].length) return refsBySha[sha][0];
+    if(commitOwner[sha]) return commitOwner[sha];
+    if(spineSet.has(sha)) return defaultBranchName;
+    return null;
+  }
+
+  uniqueBranches.forEach(b=>{
+    if('_ffBranchedFromSha' in b){
+      const ffSha = b._ffBranchedFromSha;
+      delete b._ffBranchedFromSha;
+      b.branched_from = ffSha ? ownerOf(ffSha) : null;
+    } else {
+      const mb = mergeBase(b.tip);
+      b.branched_from = mb ? ownerOf(mb) : null;
+    }
+  });
+
+  function explainerFor(kind){
+    if(kind==='merge') return "merge — brings all of the other branch's changes into this one, permanently.";
+    if(kind==='sync') return "sync — merges the copy of this branch on GitHub into the local copy, so the two match.";
+    if(kind==='update') return `rebase/merge from ${defaultBranchName} — brought the latest updates in ${defaultBranchName} to this branch to keep this branch up to date.`;
+    if(kind==='revert') return "revert — undoes an earlier change; the original commit is still in the history, this just cancels its effect.";
+    return '';
+  }
+
+  function computeEvent(sha){
+    const c = commits[sha];
+    const parents = c.parents;
+    if(parents.length > 1){
+      const target = ownerOf(sha) || defaultBranchName;
+      const incoming = ownerOf(parents[1]) || 'another branch';
+      if(target === defaultBranchName && incoming !== defaultBranchName){
+        return { kind:'merge', text:`${incoming} merged into ${defaultBranchName}`, note:explainerFor('merge') };
+      }
+      if(incoming === target){
+        return { kind:'sync', text:`Brought the latest updates into ${target}`, note:explainerFor('sync') };
+      }
+      if(incoming === defaultBranchName){
+        return { kind:'update', text:`${target} was updated with ${defaultBranchName}`, note:explainerFor('update') };
+      }
+      return { kind:'merge', text:`${incoming} merged into ${target}`, note:explainerFor('merge') };
+    }
+    if(c.subject.startsWith('Revert ')){
+      return { kind:'revert', text:c.subject, note:explainerFor('revert') };
+    }
+    return null;
+  }
+
+  const eventBySha = {};
+  order.forEach(sha=>{ const e = computeEvent(sha); if(e) eventBySha[sha]=e; });
+
+  const branchStartBySha = {};
+  uniqueBranches.forEach(b=>{
+    if(b._had_real_own && b.own_commits.length && b.branched_from){
+      const oldest = b.own_commits[b.own_commits.length-1].sha;
+      (branchStartBySha[oldest] ||= []).push({ branch:b.name, from:b.branched_from });
+    }
+  });
+  uniqueBranches.forEach(b=>{ delete b._had_real_own; });
+
+  // ---- lane layout, same reusable algorithm for full + condensed ----
+  function layoutLanes(nodeOrder, parentsOf){
+    const lanes = []; // lanes[i] = sha this lane is waiting for, or null
+    const commitLane = {}, commitColor = {}, edges = [];
+    function findFreeLane(){
+      for(let i=0;i<lanes.length;i++) if(lanes[i]===null) return i;
+      lanes.push(null); return lanes.length-1;
+    }
+    for(const sha of nodeOrder){
+      let laneIdx = -1;
+      for(let i=0;i<lanes.length;i++){ if(lanes[i]===sha){ if(laneIdx===-1) laneIdx=i; else lanes[i]=null; } }
+      if(laneIdx===-1){ laneIdx = findFreeLane(); lanes[laneIdx]=sha; }
+      commitLane[sha]=laneIdx; commitColor[sha]=PALETTE[laneIdx % PALETTE.length];
+      const parents = parentsOf(sha);
+      if(!parents.length){ lanes[laneIdx]=null; }
+      else{
+        lanes[laneIdx]=parents[0];
+        for(let k=1;k<parents.length;k++){
+          const extra = parents[k];
+          if(!lanes.includes(extra)){ const pl=findFreeLane(); lanes[pl]=extra; }
+        }
+      }
+      for(const p of parents) edges.push({from:sha, to:p});
+    }
+    const maxLane = Object.keys(commitLane).length ? Math.max(...Object.values(commitLane))+1 : 1;
+    return { commitLane, commitColor, edges, maxLane };
+  }
+
+  function buildDataset(nodeOrder, parentsOf){
+    const { commitLane, commitColor, edges, maxLane } = layoutLanes(nodeOrder, parentsOf);
+    // derive each node's parents from the edges already built, rather than
+    // calling parentsOf(sha) again — see the comment on nearestKeptParents
+    // below for why a second call corrupts the hidden-commit-count cache.
+    const parentsBySha = {};
+    edges.forEach(e=>{ (parentsBySha[e.from] ||= []).push(e.to); });
+    const nodes = nodeOrder.map((sha,i)=>{
+      const c = commits[sha];
+      return {
+        sha, short: sha.slice(0,7), parents: parentsBySha[sha] || [],
+        author: c.author, subject: c.subject, body: c.body||'', date: c.date,
+        lane: commitLane[sha], color: commitColor[sha], y: i,
+        is_merge: c.parents.length > 1,
+        refs: refsBySha[sha] || [],
+        event: eventBySha[sha] || null,
+        branch_start: branchStartBySha[sha] || null,
+      };
+    });
+    return { nodes, edges, max_lane: maxLane };
+  }
+
+  const full = buildDataset(order, sha => commits[sha].parents);
+
+  // ---- condensed graph: keep root, merges, and tips; reconnect through hidden commits ----
+  const keepSet = new Set(order.length ? [order[order.length-1]] : []);
+  order.forEach(sha=>{
+    const c = commits[sha];
+    if(c.parents.length > 1 || (refsBySha[sha] && refsBySha[sha].length)) keepSet.add(sha);
+  });
+
+  const hiddenCountQueue = {}; // key `${sha}|${target}` -> [steps, steps, ...]
+  function nearestKeptParents(sha){
+    const result = [];
+    for(const p of commits[sha].parents){
+      let steps = 0, curp = p;
+      while(curp !== null && curp !== undefined && !keepSet.has(curp)){
+        const nxt = commits[curp] ? commits[curp].parents : [];
+        curp = nxt.length ? nxt[0] : null;
+        steps++;
+      }
+      if(curp !== null && curp !== undefined){
+        result.push(curp);
+        const key = sha+'|'+curp;
+        (hiddenCountQueue[key] ||= []).push(steps);
+      }
+    }
+    return result;
+  }
+
+  const condensedOrder = order.filter(sha => keepSet.has(sha));
+  const condensed = buildDataset(condensedOrder, nearestKeptParents);
+  condensed.edges.forEach(e=>{
+    const key = e.from+'|'+e.to;
+    const q = hiddenCountQueue[key];
+    e.hidden = (q && q.length) ? q.shift() : 0;
+  });
+
+  return {
+    branches: uniqueBranches,
+    full, condensed,
+    main_tip: mainTip,
+    default_branch: defaultBranchName,
+    now: nowISO,
+  };
+}
+</script>
+<script>
+(function(){
+  const LANE_W = 20, LANE_PAD = 14, NODE_R = 4.5;
+  const laneColors = ['var(--lane0)','var(--lane1)','var(--lane2)','var(--lane3)','var(--lane4)'];
+
+  let DATA = null;
+  let now = new Date();
+  let activeFilter = 'all';
+  let graphMode = 'condensed';
+  let nodeBySha = {};
+  let byName = {};
+  let authorFilter = new Set(); // empty = everyone shown
+
+  const rowsEl = document.getElementById('rows');
+  const svg = document.getElementById('laneSvg');
+  const svgns = 'http://www.w3.org/2000/svg';
+  const centerState = document.getElementById('centerState');
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  function relTime(iso){
+    const d = new Date(iso);
+    const days = (now - d) / 86400000;
+    if(days < 1/24) return 'just now';
+    if(days < 1) return Math.round(days*24) + 'h ago';
+    if(days < 2) return 'yesterday';
+    if(days < 30) return Math.round(days) + 'd ago';
+    return Math.round(days/30) + 'mo ago';
+  }
+  function laneX(lane){ return LANE_PAD/2 + lane*LANE_W + LANE_W/2; }
+
+  // ---- drawer ----
+  const drawer = document.getElementById('branchDrawer');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  function openDrawer(){ drawer.classList.add('show'); drawerBackdrop.classList.add('show'); }
+  function closeDrawer(){ drawer.classList.remove('show'); drawerBackdrop.classList.remove('show'); }
+  document.getElementById('openBranches').addEventListener('click', openDrawer);
+  document.getElementById('closeBranches').addEventListener('click', closeDrawer);
+  drawerBackdrop.addEventListener('click', closeDrawer);
+
+  // ---- branch-focus popup ----
+  const popup = document.getElementById('branchPopup');
+  const popupBackdrop = document.getElementById('popupBackdrop');
+  function closePopup(){ popup.classList.remove('show'); popupBackdrop.classList.remove('show'); }
+  document.getElementById('closePopup').addEventListener('click', closePopup);
+  popupBackdrop.addEventListener('click', closePopup);
+
+  // Same one-at-a-time description accordion as the History panel, but
+  // scoped to this popup's own commit list (independent of the graph's
+  // expandedSha — the two views can each have their own commit open).
+  let popupExpandedSha = null;
+  document.getElementById('pBody').addEventListener('click', (ev)=>{
+    const row = ev.target.closest('.pcommit');
+    if(!row || !row.classList.contains('hasBody')) return;
+    const sha = row.dataset.sha;
+    const opening = popupExpandedSha !== sha;
+    [...document.querySelectorAll('#pBody .pcommit.expanded')].forEach(r=>{
+      r.classList.remove('expanded');
+      const btn = r.querySelector('.cExpandBtn');
+      if(btn) btn.setAttribute('aria-expanded','false');
+    });
+    popupExpandedSha = opening ? sha : null;
+    if(opening){
+      row.classList.add('expanded');
+      const btn = row.querySelector('.cExpandBtn');
+      if(btn) btn.setAttribute('aria-expanded','true');
+    }
+  });
+
+  // ---- settings popup (token + tracked repos) ----
+  const settingsPopup = document.getElementById('settingsPopup');
+  const settingsBackdrop = document.getElementById('settingsBackdrop');
+  function openSettings(){
+    document.getElementById('tokenInput').value = Store.getToken();
+    renderRepoListSettings();
+    document.getElementById('browseRepoPanel').style.display = 'none';
+    document.getElementById('browseRepoSearch').value = '';
+    document.getElementById('browseRepoErr').style.display = 'none';
+    browsedRepos = null;
+    settingsPopup.classList.add('show'); settingsBackdrop.classList.add('show');
+  }
+  function closeSettings(){ settingsPopup.classList.remove('show'); settingsBackdrop.classList.remove('show'); }
+  document.getElementById('openSettings').addEventListener('click', openSettings);
+  document.getElementById('closeSettings').addEventListener('click', closeSettings);
+  settingsBackdrop.addEventListener('click', closeSettings);
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Escape') return;
+    closeDrawer(); closePopup(); closeSettings();
+  });
+
+  function renderRepoListSettings(){
+    const el = document.getElementById('repoListSettings');
+    const repos = Store.getRepos();
+    el.innerHTML = '';
+    if(!repos.length){
+      el.innerHTML = `<div class="hint">No repos yet — add one below.</div>`;
+      return;
+    }
+    repos.forEach(r=>{
+      const row = document.createElement('div');
+      row.className = 'settingsRepo';
+      row.innerHTML = `<span>${r}</span>`;
+      const rm = document.createElement('button');
+      rm.className = 'btn danger';
+      rm.textContent = 'Remove';
+      rm.addEventListener('click', ()=>{
+        Store.setRepos(Store.getRepos().filter(x=>x!==r));
+        Store.clearCache(r);
+        renderRepoListSettings();
+        populateRepoSelect();
+      });
+      row.appendChild(rm);
+      el.appendChild(row);
+    });
+  }
+
+  document.getElementById('addRepoBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('addRepoInput');
+    const errEl = document.getElementById('addRepoErr');
+    const val = input.value.trim();
+    errEl.style.display = 'none';
+    if(!/^[\w.-]+\/[\w.-]+$/.test(val)){
+      errEl.textContent = 'Enter it as owner/repo, e.g. DhamaGaurav/PaisaFetch';
+      errEl.style.display = 'block';
+      return;
+    }
+    const repos = Store.getRepos();
+    if(!repos.includes(val)) repos.push(val);
+    Store.setRepos(repos);
+    input.value = '';
+    renderRepoListSettings();
+    populateRepoSelect();
+  });
+
+  // Save the token to localStorage as soon as it's typed, the same way a
+  // tracked repo is saved the instant "Add" is clicked — not only when
+  // "Save & close" is pressed. Previously the token was only ever written to
+  // Store from the saveSettingsBtn handler below, so using "Browse my
+  // repos" (or closing Settings via the × / backdrop / Escape instead of
+  // that button) never actually persisted it, and it looked like the token
+  // had to be re-entered on every visit even though it had been typed in.
+  const tokenInputEl = document.getElementById('tokenInput');
+  tokenInputEl.addEventListener('input', ()=>{ Store.setToken(tokenInputEl.value.trim()); });
+
+  document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
+    Store.setToken(document.getElementById('tokenInput').value.trim());
+    closeSettings();
+    maybeAutoLoad();
+  });
+
+  // ---- browse-my-repos picker (alternative to typing owner/repo by hand) ----
+  let browsedRepos = null; // cached for the lifetime of this settings-open session
+  const browseReposBtn = document.getElementById('browseReposBtn');
+  const browseRepoPanel = document.getElementById('browseRepoPanel');
+  const browseRepoList = document.getElementById('browseRepoList');
+  const browseRepoErr = document.getElementById('browseRepoErr');
+  const browseRepoSearch = document.getElementById('browseRepoSearch');
+
+  function renderBrowseRepoList(filterText){
+    const q = (filterText || '').trim().toLowerCase();
+    const tracked = new Set(Store.getRepos());
+    const rows = (browsedRepos || []).filter(r => !q || r.full_name.toLowerCase().includes(q));
+    browseRepoList.innerHTML = '';
+    if(!rows.length){
+      browseRepoList.innerHTML = `<div class="browseRepoRow"><span>No matching repos.</span></div>`;
+      return;
+    }
+    rows.forEach(r=>{
+      const row = document.createElement('div');
+      row.className = 'browseRepoRow';
+      const already = tracked.has(r.full_name);
+      row.innerHTML = `
+        <span class="brname">${r.full_name}</span>
+        <span class="brvis">${r.private ? 'private' : 'public'}</span>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'btn' + (already ? '' : ' primary');
+      btn.textContent = already ? 'Added' : 'Add';
+      btn.disabled = already;
+      btn.addEventListener('click', ()=>{
+        const repos = Store.getRepos();
+        if(!repos.includes(r.full_name)) repos.push(r.full_name);
+        Store.setRepos(repos);
+        renderRepoListSettings();
+        populateRepoSelect();
+        btn.textContent = 'Added';
+        btn.disabled = true;
+        btn.classList.remove('primary');
+      });
+      row.appendChild(btn);
+      browseRepoList.appendChild(row);
+    });
+  }
+
+  browseReposBtn.addEventListener('click', async ()=>{
+    const token = document.getElementById('tokenInput').value.trim();
+    browseRepoErr.style.display = 'none';
+    if(!token){
+      browseRepoErr.textContent = 'Enter your token above first.';
+      browseRepoErr.style.display = 'block';
+      return;
+    }
+    browseRepoPanel.style.display = 'block';
+    browseReposBtn.disabled = true;
+    const originalLabel = browseReposBtn.textContent;
+    try{
+      browseRepoList.innerHTML = `<div class="browseRepoRow"><span>Loading your repos&hellip;</span></div>`;
+      browsedRepos = await GitHub.getUserRepos(token, (msg)=>{ browseReposBtn.textContent = msg.replace(/&hellip;/, '…'); });
+      renderBrowseRepoList(browseRepoSearch.value);
+    }catch(err){
+      browseRepoList.innerHTML = '';
+      browseRepoErr.textContent = (err && err.message) || String(err);
+      browseRepoErr.style.display = 'block';
+    }finally{
+      browseReposBtn.disabled = false;
+      browseReposBtn.textContent = originalLabel;
+    }
+  });
+  browseRepoSearch.addEventListener('input', ()=> renderBrowseRepoList(browseRepoSearch.value));
+
+  // ---- repo switcher ----
+  const repoSelect = document.getElementById('repoSelect');
+  function populateRepoSelect(){
+    const repos = Store.getRepos();
+    const current = repoSelect.value;
+    repoSelect.innerHTML = '';
+    if(!repos.length){
+      const opt = document.createElement('option');
+      opt.textContent = 'No repos added';
+      opt.disabled = true; opt.selected = true;
+      repoSelect.appendChild(opt);
+      return;
+    }
+    repos.forEach(r=>{
+      const opt = document.createElement('option');
+      opt.value = r; opt.textContent = r;
+      repoSelect.appendChild(opt);
+    });
+    const want = repos.includes(current) ? current : (repos.includes(Store.getLastRepo()) ? Store.getLastRepo() : repos[0]);
+    repoSelect.value = want;
+  }
+  repoSelect.addEventListener('change', ()=>{
+    Store.setLastRepo(repoSelect.value);
+    loadRepo(repoSelect.value, {background:false});
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', ()=>{
+    if(!repoSelect.value){ openSettings(); return; }
+    loadRepo(repoSelect.value, {background:false, forceFresh:true});
+  });
+
+  function setCenterState(html){
+    centerState.style.display = 'flex';
+    centerState.innerHTML = html;
+    rowsEl.style.display = 'none';
+    svg.style.display = 'none';
+  }
+  function clearCenterState(){
+    centerState.style.display = 'none';
+    rowsEl.style.display = '';
+    svg.style.display = '';
+  }
+
+  async function loadRepo(fullName, opts){
+    opts = opts || {};
+    const token = Store.getToken();
+    if(!token){ setCenterState(`<div class="big">No GitHub token yet</div><div>Open Settings to add a personal access token.</div>`); return; }
+    const [owner, repo] = fullName.split('/');
+    const cached = Store.getCache(fullName);
+    if(cached){
+      now = new Date();
+      applyData(cached.data, {owner, repo, fullName}, cached.fetchedAt);
+    } else if(!opts.background){
+      setCenterState(`<div class="spinner"></div><div class="big">Loading ${fullName}&hellip;</div><div id="loadingDetail"></div>`);
+    }
+    try{
+      const info = await GitHub.getRepoInfo(owner, repo, token);
+      const branches = await GitHub.getAllBranches(owner, repo, token);
+      const commits = await GitHub.getAllCommits(owner, repo, branches.map(b=>b.sha), token, (msg)=>{
+        const d = document.getElementById('loadingDetail');
+        if(d) d.textContent = msg;
+      });
+      const nowISO = new Date().toISOString();
+      const built = buildGraphData(branches, commits, info.defaultBranch, nowISO);
+      Store.setCache(fullName, built);
+      now = new Date();
+      applyData(built, {owner, repo, fullName}, nowISO);
+    } catch(err){
+      if(!cached){
+        setCenterState(`<div class="big">Couldn't load ${fullName}</div><div class="errBox">${(err && err.message) || err}</div>`);
+      } else {
+        console.warn('background refresh failed', err);
+      }
+    }
+  }
+
+  function maybeAutoLoad(){
+    const repos = Store.getRepos();
+    if(!repos.length || !Store.getToken()) return;
+    populateRepoSelect();
+    loadRepo(repoSelect.value, {background:false});
+  }
+
+  // ---- main render ----
+  function applyData(data, meta, fetchedAtISO){
+    DATA = data;
+    clearCenterState();
+    activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set();
+
+    const pageTitleEl = document.getElementById('pageTitle');
+    pageTitleEl.textContent = meta.repo + ' Branch Map';
+    pageTitleEl.title = pageTitleEl.textContent;
+    const subtitleText = `${DATA.branches.length} branches across ${meta.fullName} · snapshot ${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}`;
+    const subtitleEl = document.getElementById('subtitle');
+    subtitleEl.innerHTML =
+      `${DATA.branches.length} branches across <span class="mono">${meta.fullName}</span> &middot; snapshot <span class="mono">${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}</span>`;
+    subtitleEl.title = subtitleText;
+    document.getElementById('branchCount').textContent = DATA.branches.length;
+    document.getElementById('footerNote').innerHTML =
+      `Live from GitHub &middot; <span class="mono">${meta.fullName}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`;
+
+    renderStats();
+    renderFilters();
+    renderBranchList();
+    renderGraphModeToggle();
+    renderAuthorFilters();
+    renderGraph('condensed');
+
+    byName = {};
+    DATA.branches.forEach(b=> byName[b.name] = b);
+  }
+
+  function renderStats(){
+    const tiers = {active:0, recent:0, aging:0, stale:0};
+    let cleanup = 0;
+    DATA.branches.forEach(b=>{
+      tiers[b.tier]++;
+      if(b.recommendation === 'safe-to-delete') cleanup++;
+    });
+    const statsRow = document.getElementById('statsRow');
+    statsRow.innerHTML = '';
+    [['active','Active'], ['recent','Recent'], ['aging','Aging'], ['stale','Stale']].forEach(([k,label])=>{
+      const el = document.createElement('div');
+      el.className = 'stat '+k;
+      el.innerHTML = `<div class="n">${tiers[k]}</div><div class="l">${label}</div>`;
+      statsRow.appendChild(el);
+    });
+    const flagEl = document.createElement('div');
+    flagEl.className = 'stat flag';
+    flagEl.innerHTML = `<div class="n">${cleanup}</div><div class="l">Safe to delete</div>`;
+    statsRow.appendChild(flagEl);
+  }
+
+  function renderFilters(){
+    const filterRow = document.getElementById('filterRow');
+    filterRow.innerHTML = '';
+    const filters = [['all','All'],['active','Active'],['recent','Recent'],['aging','Aging'],['stale','Stale'],['unmerged','Unmerged only']];
+    filters.forEach(([key,label])=>{
+      const c = document.createElement('div');
+      c.className = 'chip' + (key!=='all'&&key!=='unmerged' ? ' dot':'');
+      c.textContent = label;
+      c.dataset.key = key;
+      c.setAttribute('aria-pressed', key==='all' ? 'true':'false');
+      if(key==='active') c.style.color = 'var(--good)';
+      if(key==='recent') c.style.color = 'var(--recent)';
+      if(key==='aging') c.style.color = 'var(--warn)';
+      if(key==='stale') c.style.color = 'var(--crit)';
+      c.addEventListener('click', ()=>{
+        activeFilter = key;
+        [...filterRow.children].forEach(ch=>ch.setAttribute('aria-pressed', ch.dataset.key===key ? 'true':'false'));
+        renderBranchList();
+      });
+      filterRow.appendChild(c);
+    });
+  }
+
+  function recBadge(b){
+    if(b.recommendation === 'safe-to-delete') return '<span class="badge rec-safe">merged, stale — cleanup</span>';
+    if(b.recommendation === 'needs-decision') return '<span class="badge rec-needs">unmerged &amp; stale</span>';
+    return '';
+  }
+
+  function renderBranchList(){
+    const branchListEl = document.getElementById('branchList');
+    branchListEl.innerHTML = '';
+    DATA.branches.filter(b=>{
+      if(activeFilter==='all') return true;
+      if(activeFilter==='unmerged') return !b.merged_into_main;
+      return b.tier === activeFilter;
+    }).forEach(b=>{
+      const card = document.createElement('div');
+      card.className = 'bcard';
+      card.dataset.tip = b.tip;
+      let badges = '';
+      if(b.merged_into_main) badges += '<span class="badge merged">merged</span>';
+      if(b.ahead_of_main>0) badges += `<span class="badge ahead">${b.ahead_of_main} unique commit${b.ahead_of_main>1?'s':''}</span>`;
+      badges += recBadge(b);
+      card.innerHTML = `
+        <div class="row1"><span class="tierdot ${b.tier}"></span><span class="bname">${b.name}</span></div>
+        <div class="bmeta"><span>${relTime(b.date)}</span><span class="mono">${b.tip.slice(0,7)}</span></div>
+        <div class="badgerow">${badges}</div>`;
+      card.addEventListener('click', ()=> openBranchFocus(b.name));
+      branchListEl.appendChild(card);
+    });
+  }
+
+  // the currently-expanded commit's sha (only one open at a time), and the
+  // dataset/lane-width the graph geometry was last drawn against — kept
+  // around so toggling a description open/closed can re-run just the
+  // geometry pass (redrawLanes) without rebuilding every row from scratch.
+  let expandedSha = null;
+  let currentDS = null, currentLaneAreaW = 0;
+
+  function renderGraph(mode){
+    graphMode = mode;
+    const ds = DATA[mode];
+    const laneAreaW = (ds.max_lane+1)*LANE_W + LANE_PAD;
+    currentDS = ds; currentLaneAreaW = laneAreaW;
+    expandedSha = null;
+
+    svg.innerHTML = '';
+    rowsEl.innerHTML = '';
+    nodeBySha = {};
+    ds.nodes.forEach(n=> nodeBySha[n.sha] = n);
+
+    const hiddenBelow = {};
+    ds.edges.forEach(e=>{ if(e.hidden) (hiddenBelow[e.from] ||= []).push(e.hidden); });
+
+    ds.nodes.forEach(n=>{
+      const row = document.createElement('div');
+      row.className = 'crow' + (n.body ? ' hasBody' : '');
+      row.dataset.sha = n.sha;
+      const laneCell = document.createElement('div');
+      laneCell.className = 'claneCell';
+      laneCell.style.width = laneAreaW+'px';
+      row.appendChild(laneCell);
+
+      const body = document.createElement('div');
+      body.className = 'cbody';
+      const tips = n.refs.map(name=>`<span class="tippill" data-name="${name}">${name}</span>`).join('');
+      const hidden = hiddenBelow[n.sha];
+      const hiddenTxt = hidden ? hidden.map(h=>`${h} commit${h>1?'s':''} skipped &darr;`).join(', ') : '';
+      const starts = (n.branch_start || []).map(s=>
+        `<div class="cstart"><span class="k"></span>${s.branch} branched out from ${s.from}</div>`).join('');
+      const ev = n.event;
+      const expandBtn = n.body ? `<button type="button" class="cExpandBtn" aria-expanded="false" title="Show full commit description"><span class="cExpandLbl">description</span></button>` : '';
+      const headline = ev
+        ? `<div class="cevent ${ev.kind}"><span class="k"></span>${ev.text}</div>
+           ${ev.kind!=='revert' ? `<div class="craw" title="${n.subject.replace(/"/g,'&quot;')}">${n.subject}</div>` : ''}
+           ${ev.note ? `<div class="cexplain">${ev.note}</div>` : ''}`
+        : `<div class="csubject" title="${n.subject.replace(/"/g,'&quot;')}">${n.subject}</div>`;
+      body.innerHTML = `
+        ${starts}
+        ${headline}
+        <div class="cmeta"><span class="mono">${n.short}</span><span>${n.author}</span><span>${relTime(n.date)}</span>${hiddenTxt ? `<span class="hiddenMark">${hiddenTxt}</span>` : ''}${expandBtn}</div>
+        ${tips ? `<div class="ctips">${tips}</div>` : ''}
+        ${n.body ? `<div class="cdesc">${escapeHtml(n.body).replace(/\n/g,'<br>')}</div>` : ''}
+      `;
+      row.appendChild(body);
+      rowsEl.appendChild(row);
+    });
+
+    redrawLanes();
+    applyAuthorFilter();
+  }
+
+  // Re-measures every row's position (heights can change — e.g. a commit
+  // description opening/closing) and redraws the SVG lane lines/dots to
+  // match, without touching the row DOM itself.
+  function redrawLanes(){
+    const ds = currentDS, laneAreaW = currentLaneAreaW;
+    if(!ds) return;
+    svg.innerHTML = '';
+
+    [...rowsEl.children].forEach((row, i)=>{
+      const n = ds.nodes[i];
+      n._top = row.offsetTop;
+      n._h = row.offsetHeight;
+    });
+    const totalH = rowsEl.offsetHeight;
+    svg.setAttribute('width', laneAreaW);
+    svg.setAttribute('height', totalH);
+    svg.setAttribute('viewBox', `0 0 ${laneAreaW} ${totalH}`);
+
+    function rowY(n){ return n._top + n._h/2; }
+
+    ds.edges.forEach(e=>{
+      const c = nodeBySha[e.from], p = nodeBySha[e.to];
+      if(!c || !p) return;
+      const x1 = laneX(c.lane), y1 = rowY(c), x2 = laneX(p.lane), y2 = rowY(p);
+      const path = document.createElementNS(svgns,'path');
+      let d;
+      if(x1===x2){
+        d = `M ${x1} ${y1} L ${x2} ${y2}`;
+      } else {
+        const bend = Math.min(26, (y2-y1)*0.4);
+        const midY = y1 + bend;
+        d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      }
+      path.setAttribute('d', d);
+      path.setAttribute('stroke', laneColors[c.lane % laneColors.length]);
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('opacity', '0.85');
+      svg.appendChild(path);
+    });
+
+    ds.nodes.forEach(n=>{
+      const circ = document.createElementNS(svgns,'circle');
+      circ.setAttribute('cx', laneX(n.lane));
+      circ.setAttribute('cy', rowY(n));
+      circ.setAttribute('r', n.refs.length ? NODE_R+1.5 : NODE_R);
+      circ.setAttribute('fill', laneColors[n.lane % laneColors.length]);
+      if(n.refs.length){
+        circ.setAttribute('stroke', 'var(--surface)');
+        circ.setAttribute('stroke-width','2');
+      }
+      svg.appendChild(circ);
+    });
+
+    document.getElementById('graphInner').style.minHeight = totalH+'px';
+  }
+
+  rowsEl.addEventListener('click', (ev)=>{
+    const pill = ev.target.closest('.tippill');
+    if(pill){ openBranchFocus(pill.dataset.name); return; }
+    const row = ev.target.closest('.crow');
+    if(!row) return;
+    highlightRow(row.dataset.sha);
+    if(row.classList.contains('hasBody')) toggleExpand(row.dataset.sha);
+  });
+
+  // Expands one commit's full description at a time — opening a new one
+  // closes whichever was open, per the accordion behaviour asked for.
+  function toggleExpand(sha){
+    const row = rowsEl.querySelector(`.crow[data-sha="${sha}"]`);
+    if(!row || !row.classList.contains('hasBody')) return;
+    const opening = expandedSha !== sha;
+    [...rowsEl.querySelectorAll('.crow.expanded')].forEach(r=>{
+      r.classList.remove('expanded');
+      const btn = r.querySelector('.cExpandBtn');
+      if(btn) btn.setAttribute('aria-expanded','false');
+    });
+    expandedSha = opening ? sha : null;
+    if(opening){
+      row.classList.add('expanded');
+      const btn = row.querySelector('.cExpandBtn');
+      if(btn) btn.setAttribute('aria-expanded','true');
+    }
+    redrawLanes();
+  }
+
+  function highlightRow(sha){
+    const row = rowsEl.querySelector(`.crow[data-sha="${sha}"]`);
+    if(!row) return;
+    [...rowsEl.children].forEach(r=>r.classList.remove('hi'));
+    row.classList.add('hi');
+    row.scrollIntoView({block:'center', behavior:'smooth'});
+  }
+
+  function locateInGraph(sha){
+    closeDrawer(); closePopup();
+    if(graphMode!=='full' && !DATA.condensed.nodes.some(n=>n.sha===sha)){
+      setGraphMode('full');
+    }
+    requestAnimationFrame(()=> highlightRow(sha));
+  }
+
+  const graphModeRow = document.getElementById('graphModeRow');
+  function renderGraphModeToggle(){
+    graphModeRow.innerHTML = '';
+    [['condensed','Branches'],['full','All commits']].forEach(([key,label])=>{
+      const c = document.createElement('div');
+      c.className = 'chip';
+      c.textContent = label;
+      c.dataset.key = key;
+      c.setAttribute('aria-pressed', key==='condensed' ? 'true':'false');
+      c.addEventListener('click', ()=> setGraphMode(key));
+      graphModeRow.appendChild(c);
+    });
+  }
+  function setGraphMode(key){
+    [...graphModeRow.children].forEach(ch=>ch.setAttribute('aria-pressed', ch.dataset.key===key ? 'true':'false'));
+    renderGraph(key);
+  }
+
+  // "Committed by" chips for the History panel. Built from DATA.full so the
+  // full author list is offered regardless of which graph mode (condensed/
+  // full) is currently showing. Multiple authors can be selected at once;
+  // an empty selection means "everyone" (the default).
+  const authorFilterRow = document.getElementById('authorFilterRow');
+  function renderAuthorFilters(){
+    authorFilterRow.innerHTML = '';
+    const counts = {};
+    (DATA.full ? DATA.full.nodes : []).forEach(n=>{ counts[n.author] = (counts[n.author]||0) + 1; });
+    const authors = Object.keys(counts).sort((a,b)=> counts[b]-counts[a] || a.localeCompare(b));
+    if(authors.length < 2) return; // nothing useful to filter by
+
+    const allChip = document.createElement('div');
+    allChip.className = 'chip';
+    allChip.textContent = 'All authors';
+    allChip.dataset.key = '__all__';
+    allChip.setAttribute('aria-pressed', 'true');
+    allChip.addEventListener('click', ()=>{
+      authorFilter.clear();
+      applyAuthorFilter();
+    });
+    authorFilterRow.appendChild(allChip);
+
+    authors.forEach(name=>{
+      const c = document.createElement('div');
+      c.className = 'chip';
+      c.dataset.key = name;
+      c.innerHTML = `${escapeHtml(name)}<span class="cnt">${counts[name]}</span>`;
+      c.setAttribute('aria-pressed', 'false');
+      c.addEventListener('click', ()=>{
+        if(authorFilter.has(name)) authorFilter.delete(name); else authorFilter.add(name);
+        applyAuthorFilter();
+      });
+      authorFilterRow.appendChild(c);
+    });
+  }
+
+  // Dims (rather than removes) rows whose author isn't in the current
+  // selection — removing nodes outright would break the lane graph's
+  // parent/child lines, since edges are drawn between specific shas.
+  function applyAuthorFilter(){
+    if(!authorFilterRow) return;
+    [...authorFilterRow.children].forEach(ch=>{
+      const on = ch.dataset.key === '__all__' ? authorFilter.size===0 : authorFilter.has(ch.dataset.key);
+      ch.setAttribute('aria-pressed', on ? 'true':'false');
+    });
+    [...rowsEl.children].forEach(row=>{
+      const n = nodeBySha[row.dataset.sha];
+      const show = authorFilter.size===0 || (n && authorFilter.has(n.author));
+      row.classList.toggle('dim', !show);
+    });
+  }
+
+  function openBranchFocus(name){
+    const b = byName[name];
+    if(!b) return;
+    popupExpandedSha = null;
+    document.getElementById('pName').textContent = b.name;
+    const badges = [];
+    badges.push(`<span class="tierdot ${b.tier}" style="display:inline-block;"></span>`);
+    badges.push(b.tier);
+    if(b.branched_from) badges.push(`&middot; branched out from ${b.branched_from}`);
+    if(b.merged_into_main) badges.push('&middot; merged into '+DATA.default_branch);
+    else if(b.ahead_of_main>0) badges.push(`&middot; ${b.ahead_of_main} commit${b.ahead_of_main>1?'s':''} not on ${DATA.default_branch}`);
+    document.getElementById('pMeta').innerHTML = badges.join(' ');
+
+    const list = b.own_commits || [];
+    const pBody = document.getElementById('pBody');
+    if(!list.length){
+      pBody.innerHTML = `<div class="pnote">No commits of its own — this branch points at the same place as ${DATA.default_branch}.</div>`;
+    } else {
+      pBody.innerHTML = `<div class="pnote">${list.length} commit${list.length>1?'s':''} unique to this branch, newest first.</div>` +
+        list.map(c=> `
+          <div class="pcommit${c.body ? ' hasBody' : ''}" data-sha="${c.sha}">
+            <div class="csubject">${c.is_merge ? '&#8617; ' : ''}${c.subject.replace(/</g,'&lt;')}</div>
+            <div class="cmeta"><span class="mono">${c.short}</span><span>${c.author}</span><span>${relTime(c.date)}</span>${c.body ? `<button type="button" class="cExpandBtn" aria-expanded="false" title="Show full commit description"><span class="cExpandLbl">description</span></button>` : ''}</div>
+            ${c.body ? `<div class="cdesc">${escapeHtml(c.body).replace(/\n/g,'<br>')}</div>` : ''}
+          </div>`).join('');
+    }
+    document.getElementById('pLocate').onclick = ()=> locateInGraph(b.tip);
+    popup.classList.add('show');
+    popupBackdrop.classList.add('show');
+  }
+
+  // ---- boot ----
+  populateRepoSelect();
+  if(!Store.getToken() || !Store.getRepos().length){
+    setCenterState(`<div class="big">Welcome to your git platform</div><div>Open Settings to add a GitHub token and your first repo.</div>`);
+  } else {
+    maybeAutoLoad();
+  }
+
+  // exposed for local testing only — not part of the app's own behavior
+  window.__gitPlatformDebug = { buildGraphData, GitHub, Store, applyData, loadRepo };
+})();
+</script>
