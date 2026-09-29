@@ -304,6 +304,18 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238990A0' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 12px center;
 }
+/* compact variant of .repoSelect, sized to sit inline in the graph's hint
+   bar rather than the header */
+.branchHiSelect{
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+  background:var(--surface); border:1px solid var(--border); color:var(--text-2);
+  padding:4px 22px 4px 9px; border-radius:7px; cursor:pointer; flex:none;
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238990A0' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 8px center;
+  max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.branchHiSelect.active{color:var(--accent); border-color:var(--accent);}
 .iconBtn{
   display:inline-flex; align-items:center; justify-content:center;
   background:var(--surface); border:1px solid var(--border); color:var(--text-2);
@@ -387,6 +399,7 @@ footer.note .mono{color:var(--text-3);}
         <div class="filters" id="graphModeRow"></div>
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
+        <select class="branchHiSelect" id="branchHighlightSelect" title="Highlight a branch's path, dim everything else"><option value="">Highlight branch&hellip;</option></select>
         <span>click a branch to see its history &middot; click a dot for that commit</span>
         <span class="laneLegend">
           <span class="llGroup"><span class="llDot"></span>commit</span>
@@ -1299,7 +1312,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   function applyData(data, meta, fetchedAtISO){
     DATA = data;
     clearCenterState();
-    activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set();
+    activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set(); highlightPathSet = null;
 
     const pageTitleEl = document.getElementById('pageTitle');
     pageTitleEl.textContent = meta.repo + ' Branch Map';
@@ -1320,6 +1333,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     renderBranchList();
     renderGraphModeToggle();
     renderAuthorFilters();
+    renderBranchHighlightSelect();
     renderGraph('condensed');
 
     byName = {};
@@ -1480,9 +1494,14 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
     function rowY(n){ return n._top + n._h/2; }
 
+    // When a branch is highlighted, an edge/dot counts as "on the path"
+    // only if BOTH its endpoints are ancestors of the selected tip — that
+    // keeps a merge's other parent (the branch that got merged in, not
+    // this one's own history) from lighting up too.
     ds.edges.forEach(e=>{
       const c = nodeBySha[e.from], p = nodeBySha[e.to];
       if(!c || !p) return;
+      const onPath = !highlightPathSet || (highlightPathSet.has(e.from) && highlightPathSet.has(e.to));
       const x1 = laneX(c.lane), y1 = rowY(c), x2 = laneX(p.lane), y2 = rowY(p);
       const path = document.createElementNS(svgns,'path');
       let d;
@@ -1495,18 +1514,20 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       }
       path.setAttribute('d', d);
       path.setAttribute('stroke', laneColors[c.lane % laneColors.length]);
-      path.setAttribute('stroke-width', '2');
+      path.setAttribute('stroke-width', onPath && highlightPathSet ? '3' : '2');
       path.setAttribute('fill', 'none');
-      path.setAttribute('opacity', '0.85');
+      path.setAttribute('opacity', onPath ? '0.85' : '0.18');
       svg.appendChild(path);
     });
 
     ds.nodes.forEach(n=>{
+      const onPath = !highlightPathSet || highlightPathSet.has(n.sha);
       const circ = document.createElementNS(svgns,'circle');
       circ.setAttribute('cx', laneX(n.lane));
       circ.setAttribute('cy', rowY(n));
       circ.setAttribute('r', n.refs.length ? NODE_R+1.5 : NODE_R);
       circ.setAttribute('fill', laneColors[n.lane % laneColors.length]);
+      circ.setAttribute('opacity', onPath ? '1' : '0.25');
       if(n.refs.length){
         circ.setAttribute('stroke', 'var(--surface)');
         circ.setAttribute('stroke-width','2');
@@ -1626,10 +1647,61 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       const on = ch.dataset.key === '__all__' ? authorFilter.size===0 : authorFilter.has(ch.dataset.key);
       ch.setAttribute('aria-pressed', on ? 'true':'false');
     });
+    updateDimming();
+  }
+
+  // "Highlight branch" selector: picking a branch walks its full ancestry
+  // (via DATA.full, so the answer is the same real commit set regardless of
+  // which graph mode — condensed/full — happens to be showing) and both
+  // dims every row not on that path and redraws the SVG so lines/dots off
+  // the path are faded while the path itself is drawn a touch bolder.
+  const branchHighlightSelect = document.getElementById('branchHighlightSelect');
+  let highlightPathSet = null;
+  function renderBranchHighlightSelect(){
+    if(!branchHighlightSelect) return;
+    branchHighlightSelect.innerHTML = '<option value="">Highlight branch&hellip;</option>';
+    DATA.branches.slice().sort((a,b)=> a.name.localeCompare(b.name)).forEach(b=>{
+      const opt = document.createElement('option');
+      opt.value = b.name;
+      opt.textContent = b.name;
+      branchHighlightSelect.appendChild(opt);
+    });
+    branchHighlightSelect.value = '';
+  }
+  function computeAncestorSet(tipSha){
+    const parentsBySha = {};
+    DATA.full.nodes.forEach(n=> parentsBySha[n.sha] = n.parents);
+    const seen = new Set();
+    const stack = [tipSha];
+    while(stack.length){
+      const s = stack.pop();
+      if(seen.has(s)) continue;
+      seen.add(s);
+      (parentsBySha[s] || []).forEach(p=> stack.push(p));
+    }
+    return seen;
+  }
+  if(branchHighlightSelect){
+    branchHighlightSelect.addEventListener('change', ()=>{
+      const name = branchHighlightSelect.value;
+      const b = name ? byName[name] : null;
+      highlightPathSet = b ? computeAncestorSet(b.tip) : null;
+      branchHighlightSelect.classList.toggle('active', !!b);
+      updateDimming();
+      redrawLanes();
+    });
+  }
+
+  // Single source of truth for which rows are dimmed — a row is dimmed if
+  // it fails EITHER active filter (author selection, branch-path
+  // highlight), so the two combine rather than fighting over the class.
+  function updateDimming(){
     [...rowsEl.children].forEach(row=>{
-      const n = nodeBySha[row.dataset.sha];
-      const show = authorFilter.size===0 || (n && authorFilter.has(n.author));
-      row.classList.toggle('dim', !show);
+      const sha = row.dataset.sha;
+      const n = nodeBySha[sha];
+      const authorOk = authorFilter.size===0 || (n && authorFilter.has(n.author));
+      const pathOk = !highlightPathSet || highlightPathSet.has(sha);
+      row.classList.toggle('dim', !(authorOk && pathOk));
     });
   }
 
