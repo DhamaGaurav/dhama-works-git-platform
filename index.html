@@ -142,6 +142,15 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .panel > .phead h2{font-size:13px; margin:0; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2);}
 
 .filters{display:flex; gap:6px; flex-wrap:wrap;}
+/* Small always-visible legend for the lane graph — sits inline with the
+   existing "click a branch..." hint, wraps under it on narrow screens. */
+.laneLegend{display:flex; align-items:center; gap:10px; flex-wrap:wrap; row-gap:4px;}
+.llGroup{display:flex; align-items:center; gap:5px; white-space:nowrap;}
+.llGroup b{color:var(--text-2); font-weight:700;}
+.llDot{width:7px; height:7px; border-radius:50%; background:var(--text-3); display:inline-block; flex:none;}
+.llDot.ring{background:var(--text-3); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--text-3);}
+.llSwatches{gap:4px;}
+.llSwatch{width:7px; height:7px; border-radius:50%; display:inline-block; flex:none;}
 /* Committer filter: a horizontally-scrolling strip, never wraps — with
    more than a couple of authors, letting these wrap onto extra lines would
    push the graph down and shift things around every time the filter
@@ -377,7 +386,18 @@ footer.note .mono{color:var(--text-3);}
         <h2>History</h2>
         <div class="filters" id="graphModeRow"></div>
       </div>
-      <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">click a branch to see its history &middot; click a dot for that commit</div>
+      <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
+        <span>click a branch to see its history &middot; click a dot for that commit</span>
+        <span class="laneLegend">
+          <span class="llGroup"><span class="llDot"></span>commit</span>
+          <span class="llGroup"><span class="llDot ring"></span>tagged commit</span>
+          <span class="llGroup llSwatches">
+            <span class="llSwatch" style="background:var(--lane0)"></span><span class="llSwatch" style="background:var(--lane1)"></span><span class="llSwatch" style="background:var(--lane2)"></span><span class="llSwatch" style="background:var(--lane3)"></span><span class="llSwatch" style="background:var(--lane4)"></span>
+            = lanes, colors repeat &mdash; not one fixed branch
+          </span>
+          <span class="llGroup">look for the <b id="llDefaultTag">main</b> tag to find your default branch</span>
+        </span>
+      </div>
       <div class="authorFilterRow" id="authorFilterRow"></div>
       <div id="graphScroll">
         <div id="graphInner">
@@ -1290,6 +1310,8 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       `${DATA.branches.length} branches across <span class="mono">${meta.fullName}</span> &middot; snapshot <span class="mono">${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}</span>`;
     subtitleEl.title = subtitleText;
     document.getElementById('branchCount').textContent = DATA.branches.length;
+    const llDefaultTag = document.getElementById('llDefaultTag');
+    if(llDefaultTag) llDefaultTag.textContent = DATA.default_branch || 'main';
     document.getElementById('footerNote').innerHTML =
       `Live from GitHub &middot; <span class="mono">${meta.fullName}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`;
 
