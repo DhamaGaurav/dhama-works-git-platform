@@ -322,7 +322,10 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   width:34px; height:34px; border-radius:10px; cursor:pointer; box-shadow:var(--shadow); font-size:15px;
 }
 .iconBtn:hover{border-color:var(--accent); color:var(--accent);}
+.iconBtn:disabled{cursor:default; opacity:.6;}
+.iconBtn:disabled:hover{border-color:var(--border); color:var(--text-2);}
 .iconBtn.spin svg{animation:spin 0.9s linear infinite;}
+.iconBtn.spin .refreshIcon{display:inline-block; animation:spin 0.8s linear infinite;}
 @keyframes spin{ to{ transform:rotate(360deg); } }
 
 .settingsRepo{
@@ -385,7 +388,7 @@ footer.note .mono{color:var(--text-3);}
       </div>
       <div class="topRow">
         <select class="repoSelect" id="repoSelect"></select>
-        <button class="iconBtn" id="refreshBtn" title="Refresh from GitHub">&#8635;</button>
+        <button class="iconBtn" id="refreshBtn" title="Refresh from GitHub"><span class="refreshIcon">&#8635;</span></button>
         <button class="iconBtn" id="openSettings" title="Settings">&#9881;</button>
         <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
       </div>
@@ -1227,6 +1230,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
   // ---- repo switcher ----
   const repoSelect = document.getElementById('repoSelect');
+  const refreshBtn = document.getElementById('refreshBtn');
   function populateRepoSelect(){
     const repos = Store.getRepos();
     const current = repoSelect.value;
@@ -1280,6 +1284,19 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     } else if(!opts.background){
       setCenterState(`<div class="spinner"></div><div class="big">Loading ${fullName}&hellip;</div><div id="loadingDetail"></div>`);
     }
+    // Some visible sign that a fetch is actually happening — otherwise a
+    // click on Refresh with cached data already on screen looks like it did
+    // nothing at all (the page re-renders the same cached content instantly,
+    // then silently swaps in fresh data whenever it lands), which just
+    // invites repeated clicking. The spin/disable covers every load
+    // (startup, repo switch, explicit refresh) so feedback is consistent.
+    refreshBtn.classList.add('spin');
+    refreshBtn.disabled = true;
+    refreshBtn.title = 'Fetching from GitHub…';
+    if(cached){
+      const footerNoteEl = document.getElementById('footerNote');
+      footerNoteEl.innerHTML = `Live from GitHub &middot; <span class="mono">${fullName}</span> &middot; <span class="refreshedNote">refreshing&hellip;</span>`;
+    }
     try{
       const info = await GitHub.getRepoInfo(owner, repo, token);
       const branches = await GitHub.getAllBranches(owner, repo, token);
@@ -1297,7 +1314,15 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         setCenterState(`<div class="big">Couldn't load ${fullName}</div><div class="errBox">${(err && err.message) || err}</div>`);
       } else {
         console.warn('background refresh failed', err);
+        // restore the last-known-good timestamp instead of leaving the
+        // footer stuck on "refreshing…" forever
+        document.getElementById('footerNote').innerHTML =
+          `Live from GitHub &middot; <span class="mono">${fullName}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(cached.fetchedAt)} &middot; refresh failed, showing cached data</span>`;
       }
+    } finally {
+      refreshBtn.classList.remove('spin');
+      refreshBtn.disabled = false;
+      refreshBtn.title = 'Refresh from GitHub';
     }
   }
 
