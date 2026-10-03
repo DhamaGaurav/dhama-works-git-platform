@@ -197,6 +197,12 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 #graphScroll{flex:1; min-height:0; overflow-y:auto; overflow-x:auto; position:relative;}
 #graphInner{position:relative;}
 #laneSvg{position:absolute; top:0; left:0; pointer-events:none;}
+.lineTooltip{
+  position:fixed; z-index:60; background:var(--text); color:var(--surface);
+  font-size:11px; font-weight:700; padding:4px 9px; border-radius:6px;
+  pointer-events:none; transform:translate(-50%,-130%); white-space:nowrap;
+  box-shadow:var(--shadow); font-family:'JetBrains Mono',monospace;
+}
 .crow{
   display:flex; align-items:flex-start; gap:10px; padding:6px 14px 6px 0;
   border-bottom:1px solid var(--border); position:relative; overflow:hidden;
@@ -439,6 +445,7 @@ footer.note .mono{color:var(--text-3);}
   </aside>
 
   <div class="backdrop" id="popupBackdrop"></div>
+  <div class="lineTooltip" id="lineTooltip" style="display:none;"></div>
   <div class="popup" id="branchPopup">
     <div class="phead2">
       <div>
@@ -1011,11 +1018,19 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     e.hidden = (q && q.length) ? q.shift() : 0;
   });
 
+  // Which branch "owns" each commit, for clicking a line in the graph to
+  // identify it — most-specific-branch ownership (see commitOwner above),
+  // falling back to whichever branch(es) actually point at the commit,
+  // then to the default branch for anything on its spine.
+  const ownerBySha = {};
+  order.forEach(sha=>{ ownerBySha[sha] = ownerOf(sha); });
+
   return {
     branches: uniqueBranches,
     full, condensed,
     main_tip: mainTip,
     default_branch: defaultBranchName,
+    owner_by_sha: ownerBySha,
     now: nowISO,
   };
 }
@@ -1558,6 +1573,30 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       path.setAttribute('fill', 'none');
       path.setAttribute('opacity', onPath ? '0.85' : '0.18');
       svg.appendChild(path);
+
+      // A wide, invisible line drawn on top of the visible one, just so
+      // there's something easy to click/tap — the real line is only 2-3px
+      // and would be fiddly to hit exactly. Owner is taken from the child
+      // (more tip-ward) commit, since that's the more specific branch when
+      // an edge runs through shared history.
+      const owner = DATA.owner_by_sha ? DATA.owner_by_sha[e.from] : null;
+      if(owner && byName[owner]){
+        const hit = document.createElementNS(svgns,'path');
+        hit.setAttribute('d', d);
+        hit.setAttribute('stroke', 'transparent');
+        hit.setAttribute('stroke-width', '14');
+        hit.setAttribute('fill', 'none');
+        hit.style.pointerEvents = 'stroke';
+        hit.style.cursor = 'pointer';
+        hit.addEventListener('click', (ev)=>{
+          setBranchHighlight(owner);
+          showLineTooltip(owner, ev.clientX, ev.clientY);
+        });
+        const titleEl = document.createElementNS(svgns,'title');
+        titleEl.textContent = owner;
+        hit.appendChild(titleEl);
+        svg.appendChild(hit);
+      }
     });
 
     ds.nodes.forEach(n=>{
@@ -1721,15 +1760,37 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     }
     return seen;
   }
-  if(branchHighlightSelect){
-    branchHighlightSelect.addEventListener('change', ()=>{
-      const name = branchHighlightSelect.value;
-      const b = name ? byName[name] : null;
-      highlightPathSet = b ? computeAncestorSet(b.tip) : null;
+  // Shared by the dropdown and by clicking a line/dot directly in the graph
+  // (see redrawLanes' hit-areas below) — both just need to agree on a
+  // branch name and this does the rest.
+  function setBranchHighlight(name){
+    const b = name ? byName[name] : null;
+    highlightPathSet = b ? computeAncestorSet(b.tip) : null;
+    if(branchHighlightSelect){
+      branchHighlightSelect.value = b ? name : '';
       branchHighlightSelect.classList.toggle('active', !!b);
-      updateDimming();
-      redrawLanes();
-    });
+    }
+    updateDimming();
+    redrawLanes();
+  }
+  if(branchHighlightSelect){
+    branchHighlightSelect.addEventListener('change', ()=> setBranchHighlight(branchHighlightSelect.value));
+  }
+
+  // Small floating label that names the branch a clicked line/dot belongs
+  // to — the click also selects it in the dropdown above (setBranchHighlight),
+  // this just gives immediate "yes, that's the one" feedback at the point
+  // you clicked, since the dropdown can be a little out of eyeline.
+  const lineTooltip = document.getElementById('lineTooltip');
+  let lineTooltipTimer = null;
+  function showLineTooltip(name, clientX, clientY){
+    if(!lineTooltip) return;
+    lineTooltip.textContent = name;
+    lineTooltip.style.left = clientX+'px';
+    lineTooltip.style.top = clientY+'px';
+    lineTooltip.style.display = 'block';
+    clearTimeout(lineTooltipTimer);
+    lineTooltipTimer = setTimeout(()=>{ lineTooltip.style.display = 'none'; }, 1600);
   }
 
   // Single source of truth for which rows are dimmed — a row is dimmed if
