@@ -196,7 +196,13 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 /* graph */
 #graphScroll{flex:1; min-height:0; overflow-y:auto; overflow-x:auto; position:relative;}
 #graphInner{position:relative;}
-#laneSvg{position:absolute; top:0; left:0; pointer-events:none;}
+/* z-index:1 matters here: .crow rows are position:relative (for the
+   highlight-row background inset) and come after this SVG in the DOM, so
+   without an explicit z-index they'd win the stacking tie-break and sit on
+   top of it, silently eating every click meant for a line/dot hit-area
+   underneath. The SVG root stays pointer-events:none so empty space and
+   decorative (non-hit) shapes still fall through to the row beneath. */
+#laneSvg{position:absolute; top:0; left:0; pointer-events:none; z-index:1;}
 .lineTooltip{
   position:fixed; z-index:60; background:var(--text); color:var(--surface);
   font-size:11px; font-weight:700; padding:4px 9px; border-radius:6px;
