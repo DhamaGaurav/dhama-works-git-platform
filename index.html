@@ -934,6 +934,21 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       }
       for(const p of parents) edges.push({from:sha, to:p});
     }
+    // Pin the default branch to lane 0 (leftmost line, first color) so it's
+    // always in the same place regardless of commit timing — swap whatever
+    // landed in lane 0 with main's lane rather than reassigning everything,
+    // so the rest of the layout stays as the algorithm naturally produced it.
+    if(mainTip !== undefined && mainTip in commitLane){
+      const mainLane = commitLane[mainTip];
+      if(mainLane !== 0){
+        const original = Object.assign({}, commitLane);
+        for(const sha of Object.keys(commitLane)){
+          if(original[sha] === 0) commitLane[sha] = mainLane;
+          else if(original[sha] === mainLane) commitLane[sha] = 0;
+          commitColor[sha] = PALETTE[commitLane[sha] % PALETTE.length];
+        }
+      }
+    }
     const maxLane = Object.keys(commitLane).length ? Math.max(...Object.values(commitLane))+1 : 1;
     return { commitLane, commitColor, edges, maxLane };
   }
