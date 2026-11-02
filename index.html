@@ -195,6 +195,11 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
   flex:none;
 }
+/* The Person details button lives in the empty gap of the History header. It is
+   positioned out of flow, so showing or hiding it can never resize or move the
+   title, the toggle, the filters or the graph. */
+.phSlot{flex:1 1 0; min-width:0; align-self:stretch; position:relative;}
+.phSlot .btn{position:absolute; left:8px; top:50%; transform:translateY(-50%); white-space:nowrap; max-width:calc(100% - 8px);}
 .panel > .phead h2{font-size:13px; margin:0; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2);}
 
 .filters{display:flex; gap:6px; flex-wrap:wrap;}
@@ -582,8 +587,8 @@ footer.note .mono{color:var(--text-3);}
     <section class="panel">
       <div class="phead">
         <h2>History</h2>
+        <div class="phSlot"><button class="btn primary" id="personDetailsBtn" style="display:none;">Person details</button></div>
         <div class="filters" id="graphModeRow"></div>
-        <button class="btn primary" id="personDetailsBtn" style="display:none;">Person details</button>
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
         <select class="branchHiSelect" id="branchHighlightSelect" title="Highlight a branch's path, dim everything else"><option value="">Highlight branch&hellip;</option></select>
@@ -2447,6 +2452,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   let live = false, lastMove = 0, raf = 0, color = '';
   const nodes = new Map();                    // dot key -> strand state
   const slots = Array.from({length:SPOKES}, ()=> []);  // (spoke, ring) -> the dot it is anchored to
+  const CONTENT_SEL = '.panel, .drawer, .pcard, .ptile', CONTENT_FADE = 0.78;   // erase 78% of the web over content
   const TOL = 36;                             // a strand keeps its dot until the ideal spot drifts this far
   function accent(){ color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#5B4FD6'; }
   accent();
@@ -2546,6 +2552,15 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         ctx.beginPath(); ctx.arc(n.x, n.y, 2, 0, 6.283); ctx.fill();
       });
       ctx.globalAlpha = 1;
+      // over real content (cards, tiles, the branch column) the web is only a
+      // faint trace, so it never hides details; on the open backdrop it stays strong
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0,0,0,' + CONTENT_FADE + ')';
+      document.querySelectorAll(CONTENT_SEL).forEach(el=>{
+        const r = el.getBoundingClientRect();
+        if(r.width && r.bottom > 0 && r.top < H && r.right > 0 && r.left < W) ctx.fillRect(r.left, r.top, r.width, r.height);
+      });
+      ctx.globalCompositeOperation = 'source-over';
     }
     if(live || nodes.size) raf = requestAnimationFrame(frame);
   }
