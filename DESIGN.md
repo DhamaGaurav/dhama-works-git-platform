@@ -29,17 +29,17 @@ The app must stay readable with many people, parallel branches and several merge
 
 ## Kolam and life (reference: Gloss, not a copy)
 - **Dot field**: a quiet staggered pulli dot field behind everything (`--dot`, 10% light / 7% dark). Cards are 90% opaque surfaces on top of it, so the field and the cursor web show faintly through.
-- **Cursor web**: a spider web (11 spokes, 4 sagging rings, dew dots) spins itself around the pointer, eases after it, and fades about a second after the pointer rests. Canvas behind the cards; it draws no frames while faded out, and is off under Reduce Motion.
+- **Cursor web**: silk is spun from the pointer to the backdrop's own Kolam dots (the two staggered lattices the CSS paints), 12 spokes with up to 4 anchors each, ring threads sagging between neighbouring anchors, dew on every anchored dot. It reaches out toward where the pointer is heading (up to 1.6x ahead) and the strands behind pull in and retract into their dots (down to 0.4x, or dropped when moving fast). A strand keeps its dot until the pointer drags it more than 36px from its ideal spot. It fully collapses about 1.2 s after the pointer rests. Canvas over the page (pointer-events off, about 40% opacity so text stays readable); it draws no frames once collapsed, and is off under Reduce Motion.
 - **Rope rail**: two twisted strands under the header (a sine pair, never eye-shaped loops). Faint at rest; drawn in the accent while loading.
 - **Rest**: the default branch's tip node breathes (5 s cycle). The spider blinks about every 6 s and tilts its head about every 9 s.
-- **Wake**: hovering, scrolling or touching the graph quickens the breathing (3.6 s) for about 1.4 s. Hovering the header makes the spider wiggle its legs and tilt faster.
-- **Work**: while loading, the rope draws itself and the spider scurries along it. The refresh icon holds still (no spinner).
+- **Wake**: hovering, scrolling or touching the graph quickens the breathing (3.6 s) for about 1.4 s. Hovering the controls makes the spider wiggle its legs and tilt faster.
+- **Work**: while loading, the rope draws itself and the spider paces back and forth across the refresh button. The refresh icon holds still (no spinner).
 - **Settle**: one ring leaves the tip node when new data lands, then back to Rest.
 - Reduce Motion turns all of it off.
 
 ## Character: the spider
 - Ink body, an accent hourglass mark, eight legs, two paper eyes; about 34px.
-- Lives permanently on the rope rail in the top bar, as the crow does in Gloss. The logo is separate and is never replaced by the mascot.
+- Lives permanently in the top bar, perched on the top edge of the refresh button (its Work state is the refresh), as the crow lives in Gloss's top bar. The logo is separate and is never replaced by the mascot.
 - It is the screen's one character moment, so it does not appear in cards, the Person details screen, or empty states. The first-run welcome gets a small rope-and-pulli Kolam divider, not a second spider.
 
 ## Person details (drill-down)
@@ -56,3 +56,4 @@ A "Person details" button appears in the History header once someone is picked i
 ## Feedback log
 - 2026-11-02: Chose Option A over B (web layout) from the canvas.
 - 2026-11-02: In Option A a lane dot overflowed outside its card. Rule: nothing may overflow its card; size the lane graph to the widest lane plus dot radius and halo, and clip it.
+- 2026-11-02: Spider under the header subtitle (left, on the rope) was rejected; moved to the refresh button, top right. Web must expand toward pointer movement, collapse behind it, and stick to the backdrop's Kolam dots.

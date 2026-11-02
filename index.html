@@ -80,11 +80,13 @@ body.awake #laneSvg .breathe{animation-duration:3.6s;}
 #laneSvg .settleRing{animation:ripple 1.2s ease-out 1 forwards;}
 /* Kolam rope rail under the header: two twisted strands, faint at rest,
    drawn in the accent while loading, with the spider perched on it. */
-.ropeRail{position:relative; height:32px; margin-top:-8px; flex:none; pointer-events:none;}
+.ropeRail{position:relative; height:14px; margin-top:-6px; flex:none; pointer-events:none;}
 .kolamThread{position:absolute; left:0; right:0; bottom:0; width:100%; height:14px;}
 .kolamThread path{fill:none; stroke:var(--text-3); opacity:.4; stroke-width:1.8; stroke-linecap:round; vector-effect:non-scaling-stroke;}
 body.working .kolamThread path{stroke:var(--accent); opacity:1; stroke-dasharray:1; stroke-dashoffset:1; animation:threadDraw 1.6s ease-in-out infinite;}
-.spider{position:absolute; bottom:5px; left:5%; width:34px; height:30px; margin-left:-17px; color:var(--text);}
+/* the spider perches on the top edge of the refresh button; it paces across it while loading */
+.refreshWrap{position:relative; display:inline-flex;}
+.spider{position:absolute; left:50%; bottom:100%; width:31px; height:28px; margin:0 0 -6px -15px; color:var(--text); pointer-events:none;}
 .spider svg{display:block; width:100%; height:100%; overflow:visible;}
 .spider .legs{stroke:currentColor; stroke-width:1.5; fill:none; stroke-linecap:round; stroke-linejoin:round; transform-box:fill-box; transform-origin:center;}
 .spider .body{fill:currentColor;} .spider .eye{fill:var(--surface);} .spider .mark{fill:var(--accent);}
@@ -94,11 +96,11 @@ body.working .kolamThread path{stroke:var(--accent); opacity:1; stroke-dasharray
 @keyframes blink{0%,94%,100%{transform:scaleY(1);} 97%{transform:scaleY(.1);}}
 @keyframes tilt{0%,70%,100%{transform:rotate(0);} 78%,90%{transform:rotate(-12deg);}}
 @keyframes wiggle{0%,100%{transform:scaleX(1);} 50%{transform:scaleX(1.06);}}
-@keyframes scurry{from{left:5%;} to{left:94%;}}
-header.top:hover .spider .head{animation-duration:3s;}
-header.top:hover .spider .legs{animation:wiggle .5s ease-in-out infinite;}
-body.working .spider{animation:scurry 3.2s ease-in-out infinite alternate;}
-#webCanvas{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none;}
+@keyframes scurry{from{transform:translateX(-13px);} to{transform:translateX(13px);}}
+.topRow:hover .spider .head{animation-duration:3s;}
+.topRow:hover .spider .legs, body.working .spider .legs{animation:wiggle .35s ease-in-out infinite;}
+body.working .spider{animation:scurry 1.1s ease-in-out infinite alternate;}
+#webCanvas{position:fixed; inset:0; width:100%; height:100%; z-index:5; pointer-events:none;}
 .wrap{position:relative; z-index:1;}
 :root{--surface-glass:color-mix(in srgb, var(--surface) 90%, transparent);}
 .panel, .drawer{background:var(--surface-glass) !important;}
@@ -566,14 +568,13 @@ footer.note .mono{color:var(--text-3);}
       </div>
       <div class="topRow">
         <select class="repoSelect" id="repoSelect"></select>
-        <button class="iconBtn" id="refreshBtn" title="Refresh from GitHub"><span class="refreshIcon">&#8635;</span></button>
+        <span class="refreshWrap"><span class="spider" id="spider"><svg viewBox="0 0 34 30" role="img" aria-label="Spider mascot, perched on the refresh button"><g class="legs"><path d="M13 14 L5 8 L2 12"/><path d="M13 16 L4 15 L1 20"/><path d="M13 18 L5 22 L3 27"/><path d="M14 20 L9 25 L8 29"/><path d="M21 14 L29 8 L32 12"/><path d="M21 16 L30 15 L33 20"/><path d="M21 18 L29 22 L31 27"/><path d="M20 20 L25 25 L26 29"/></g><ellipse class="body" cx="17" cy="19" rx="6.5" ry="7.5"/><path class="mark" d="M17 15.5 L19 19 L17 22.5 L15 19 Z"/><g class="head"><circle class="body" cx="17" cy="9.5" r="4.2"/><circle class="eye" cx="15.2" cy="8.8" r="1.1"/><circle class="eye" cx="18.8" cy="8.8" r="1.1"/></g></svg></span><button class="iconBtn" id="refreshBtn" title="Refresh from GitHub"><span class="refreshIcon">&#8635;</span></button></span>
         <button class="iconBtn" id="openSettings" title="Settings">&#9881;</button>
         <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
       </div>
     </div>
     <div class="ropeRail">
       <svg class="kolamThread" viewBox="0 0 1860 14" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M0 7 q15 -12 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0"/><path pathLength="1" d="M0 7 q15 12 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0"/></svg>
-      <div class="spider" id="spider"><svg viewBox="0 0 34 30" role="img" aria-label="Spider mascot, perched on the rope"><g class="legs"><path d="M13 14 L5 8 L2 12"/><path d="M13 16 L4 15 L1 20"/><path d="M13 18 L5 22 L3 27"/><path d="M14 20 L9 25 L8 29"/><path d="M21 14 L29 8 L32 12"/><path d="M21 16 L30 15 L33 20"/><path d="M21 18 L29 22 L31 27"/><path d="M20 20 L25 25 L26 29"/></g><ellipse class="body" cx="17" cy="19" rx="6.5" ry="7.5"/><path class="mark" d="M17 15.5 L19 19 L17 22.5 L15 19 Z"/><g class="head"><circle class="body" cx="17" cy="9.5" r="4.2"/><circle class="eye" cx="15.2" cy="8.8" r="1.1"/><circle class="eye" cx="18.8" cy="8.8" r="1.1"/></g></svg></div>
     </div>
   </header>
 
@@ -2419,9 +2420,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 </script>
 
 <script>
-// Cursor web: a spider web spins itself around the pointer on the Kolam
-// backdrop and fades once the pointer rests. Drawn on a canvas behind the
-// cards; skipped under Reduce Motion, and idle (no frames) when faded out.
+// Cursor web. Silk is spun from the pointer to the Kolam dots of the
+// backdrop (the same two staggered lattices the CSS paints). It reaches
+// out toward where the pointer is heading, and the strands behind the
+// pointer retract back into their dots. Each strand stays anchored to a
+// dot; ring threads join neighbouring anchors with a little sag. Drawn on
+// a canvas over the page (pointer-events off); skipped under Reduce Motion and idle (no
+// frames) once everything has retracted.
 (function(){
   const cv = document.getElementById('webCanvas');
   if(!cv || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -2434,47 +2439,115 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   size(); addEventListener('resize', size);
-  const SPOKES = 11, RINGS = [0.22, 0.42, 0.64, 0.88], R = 190;
-  const wob = Array.from({length:SPOKES}, (_,i)=> 0.86 + 0.14*Math.abs(Math.sin(i*2.7 + 1)));
-  let tx = -999, ty = -999, x = -999, y = -999, strength = 0, last = 0, raf = 0, color = '';
+
+  const GRID = 32, SPOKES = 12, RINGS = [46, 92, 138, 184];
+  const IN = 0.16, OUT = 0.11;               // extend / retract speed per frame
+  let tx = -999, ty = -999, x = -999, y = -999;
+  let vx = 0, vy = 0, speed = 0, heading = 0;
+  let live = false, lastMove = 0, raf = 0, color = '';
+  const nodes = new Map();                    // dot key -> strand state
+  const slots = Array.from({length:SPOKES}, ()=> []);  // (spoke, ring) -> the dot it is anchored to
+  const TOL = 36;                             // a strand keeps its dot until the ideal spot drifts this far
   function accent(){ color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#5B4FD6'; }
   accent();
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', accent);
+
+  // nearest Kolam dot to a point: the CSS paints dots at (32i, 32j) and (32i+16, 32j+16)
+  function nearestDot(px, py){
+    const ax = Math.round(px/GRID)*GRID, ay = Math.round(py/GRID)*GRID;
+    const bx = Math.round((px-16)/GRID)*GRID + 16, by = Math.round((py-16)/GRID)*GRID + 16;
+    return (Math.hypot(px-ax, py-ay) <= Math.hypot(px-bx, py-by))
+      ? {x:ax, y:ay, key:'a'+ax+','+ay} : {x:bx, y:by, key:'b'+bx+','+by};
+  }
+
   addEventListener('mousemove', e=>{
     if(x < -900){ x = e.clientX; y = e.clientY; }
-    tx = e.clientX; ty = e.clientY; last = performance.now();
+    tx = e.clientX; ty = e.clientY; live = true; lastMove = performance.now();
     if(!raf) raf = requestAnimationFrame(frame);
   }, {passive:true});
-  document.addEventListener('mouseleave', ()=>{ last = 0; });
-  function pt(i, f){ const a = i/SPOKES*Math.PI*2 - Math.PI/2; return [x + Math.cos(a)*R*f*wob[i], y + Math.sin(a)*R*f*wob[i]]; }
+  document.addEventListener('mouseleave', ()=>{ live = false; });
+
   function frame(now){
     raf = 0;
-    x += (tx - x)*0.18; y += (ty - y)*0.18;
-    const live = last && now - last < 900;
-    strength += ((live ? 1 : 0) - strength)*(live ? 0.12 : 0.05);
+    const px = x, py = y;
+    x += (tx - x)*0.35; y += (ty - y)*0.35;
+    vx += ((x - px) - vx)*0.25; vy += ((y - py) - vy)*0.25;
+    const v = Math.hypot(vx, vy);
+    speed += (Math.min(1, v/14) - speed)*0.2;
+    if(v > 0.6) heading = Math.atan2(vy, vx);
+    if(now - lastMove > 700) live = false;
+
+    // which dots are strand anchors this frame: one per (spoke, ring), pushed
+    // out ahead of the pointer and pulled in behind it
+    const wanted = new Map();
+    const slot = [];
+    for(let k=0;k<SPOKES;k++){
+      slot[k] = [];
+      const a = k/SPOKES*Math.PI*2;
+      const along = Math.cos(a - heading);
+      if(!live || (speed > 0.45 && along < -0.35)){ slots[k] = []; continue; }   // behind or idle: let it retract
+      for(let ri=0;ri<RINGS.length;ri++){
+        const r = RINGS[ri]*(1 + 0.6*speed*along);
+        const gx = x + Math.cos(a)*r, gy = y + Math.sin(a)*r;
+        let d = slots[k][ri];
+        // keep the current anchor while it is still near its ideal spot, so
+        // strands stay put on their dots instead of flickering between them
+        if(!d || Math.hypot(d.x - gx, d.y - gy) > TOL || wanted.has(d.key)) d = nearestDot(gx, gy);
+        if(wanted.has(d.key)){ slots[k][ri] = null; continue; }
+        wanted.set(d.key, true);
+        slots[k][ri] = d; slot[k][ri] = d;
+      }
+    }
+    slot.forEach((ring,k)=> ring.forEach((d,ri)=>{
+      let n = nodes.get(d.key);
+      if(!n){ n = {x:d.x, y:d.y, t:0, dir:1, px:x, py:y}; nodes.set(d.key, n); }
+      n.dir = 1; d.n = n;
+      // parent: previous anchor on this spoke, else the pointer
+      let prev = null;
+      for(let j=ri-1;j>=0;j--) if(ring[j]){ prev = ring[j].n || nodes.get(ring[j].key); break; }
+      n.parent = prev; n.px = prev ? prev.x : x; n.py = prev ? prev.y : y;
+    }));
+    nodes.forEach((n,key)=>{
+      if(!wanted.has(key)) n.dir = -1;
+      n.t += n.dir > 0 ? IN : -OUT;
+      if(n.t > 1) n.t = 1;
+      if(n.t <= 0 && n.dir < 0) nodes.delete(key);
+    });
+
     ctx.clearRect(0,0,W,H);
-    if(strength > 0.02){
-      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineCap = 'round';
-      ctx.globalAlpha = 0.5*strength; ctx.lineWidth = 1;
-      ctx.beginPath();
-      for(let i=0;i<SPOKES;i++){ const p = pt(i,1); ctx.moveTo(x,y); ctx.lineTo(p[0],p[1]); }
-      ctx.stroke();
-      RINGS.forEach((f,ri)=>{
-        ctx.globalAlpha = (0.42 - ri*0.07)*strength;
-        ctx.beginPath();
-        for(let i=0;i<SPOKES;i++){
-          const a = pt(i,f), b = pt((i+1)%SPOKES,f);
-          const mx = (a[0]+b[0])/2 + (x - (a[0]+b[0])/2)*0.14, my = (a[1]+b[1])/2 + (y - (a[1]+b[1])/2)*0.14;
-          if(i===0) ctx.moveTo(a[0],a[1]);
-          ctx.quadraticCurveTo(mx,my,b[0],b[1]);
-        }
-        ctx.stroke();
+    if(nodes.size){
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineCap = 'round'; ctx.lineWidth = 1;
+      // spokes: each strand runs from its parent to its dot. Growing strands
+      // reach out from the parent; retracting ones are pulled back into the dot.
+      nodes.forEach(n=>{
+        const par = n.parent ? [n.parent.x, n.parent.y] : [x, y];
+        const sx = n.dir > 0 ? par[0] : n.x, sy = n.dir > 0 ? par[1] : n.y;
+        const ex = n.dir > 0 ? n.x : par[0], ey = n.dir > 0 ? n.y : par[1];
+        const tt = Math.max(0, Math.min(1, n.t));
+        ctx.globalAlpha = 0.42*tt;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + (ex-sx)*tt, sy + (ey-sy)*tt); ctx.stroke();
       });
-      ctx.globalAlpha = 0.6*strength;
-      RINGS.forEach(f=>{ for(let i=0;i<SPOKES;i+=2){ const p = pt(i,f); ctx.beginPath(); ctx.arc(p[0],p[1],1.5,0,6.283); ctx.fill(); } });
+      // ring threads between neighbouring anchors, with a slight sag toward the pointer
+      for(let ri=0;ri<RINGS.length;ri++){
+        for(let k=0;k<SPOKES;k++){
+          const A = slot[k] && slot[k][ri], B = slot[(k+1)%SPOKES] && slot[(k+1)%SPOKES][ri];
+          if(!A || !B || !A.n || !B.n) continue;
+          const t = Math.min(A.n.t, B.n.t);
+          if(t < 0.5) continue;
+          const mx = (A.x+B.x)/2 + (x - (A.x+B.x)/2)*0.12, my = (A.y+B.y)/2 + (y - (A.y+B.y)/2)*0.12;
+          ctx.globalAlpha = (0.36 - ri*0.05)*t;
+          ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.quadraticCurveTo(mx, my, B.x, B.y); ctx.stroke();
+        }
+      }
+      // dew on every anchored dot
+      nodes.forEach(n=>{
+        if(n.t < 0.5) return;
+        ctx.globalAlpha = 0.6*n.t;
+        ctx.beginPath(); ctx.arc(n.x, n.y, 2, 0, 6.283); ctx.fill();
+      });
       ctx.globalAlpha = 1;
     }
-    if(live || strength > 0.02) raf = requestAnimationFrame(frame);
+    if(live || nodes.size) raf = requestAnimationFrame(frame);
   }
 })();
 </script>
