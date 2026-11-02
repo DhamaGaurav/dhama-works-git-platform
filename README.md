@@ -15,6 +15,7 @@ GitHub token and tracked repos are stored only in that browser's
 Your fine-grained GitHub PAT needs, at minimum:
 - **Repository access**: the repos you want to view
 - **Repository permissions → Contents**: Read-only
+- Optional: **Pull requests**: Read-only, only if you want pull request titles in Person details (it works without)
 
 ## Features
 
@@ -23,6 +24,7 @@ Your fine-grained GitHub PAT needs, at minimum:
 - "Committed by" filter for the history panel
 - Expandable commit descriptions (one open at a time), in both the history
   panel and the branch-focus popup
+- Person details: pick someone in "Committed by", then open a full-screen view of their branches, collaborators, activity, and (on request) pull requests and files changed
 - "Browse my repos" picker so you don't have to type owner/repo by hand
 - Works fully offline once a repo's data has been fetched, until you refresh
 
