@@ -100,7 +100,9 @@ body.working .kolamThread path{stroke:var(--accent); opacity:1; stroke-dasharray
 .topRow:hover .spider .head{animation-duration:3s;}
 .topRow:hover .spider .legs, body.working .spider .legs{animation:wiggle .35s ease-in-out infinite;}
 body.working .spider{animation:scurry 1.1s ease-in-out infinite alternate;}
-#webCanvas{position:fixed; inset:0; width:100%; height:100%; z-index:5; pointer-events:none;}
+/* Layer 0: the Kolam backdrop and the web. Cards are layer 1; popups, the drawer
+   and Person details are layer 2, and the web fades further beneath them. */
+#webCanvas{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; transition:opacity .3s ease;}
 .wrap{position:relative; z-index:1;}
 :root{--surface-glass:color-mix(in srgb, var(--surface) 90%, transparent);}
 .panel, .drawer{background:var(--surface-glass) !important;}
@@ -2445,14 +2447,14 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   }
   size(); addEventListener('resize', size);
 
-  const GRID = 32, SPOKES = 12, RINGS = [46, 92, 138, 184];
+  const GRID = 32, SPOKES = 8, RINGS = [34, 68, 104];   // a small, sparse web
   const IN = 0.16, OUT = 0.11;               // extend / retract speed per frame
   let tx = -999, ty = -999, x = -999, y = -999;
   let vx = 0, vy = 0, speed = 0, heading = 0;
   let live = false, lastMove = 0, raf = 0, color = '';
   const nodes = new Map();                    // dot key -> strand state
   const slots = Array.from({length:SPOKES}, ()=> []);  // (spoke, ring) -> the dot it is anchored to
-  const CONTENT_SEL = '.panel, .drawer, .pcard, .ptile', CONTENT_FADE = 0.78;   // erase 78% of the web over content
+  const TOP_LAYER = '.popup.show, .drawer.show, .pview.show';   // anything on layer 2
   const TOL = 36;                             // a strand keeps its dot until the ideal spot drifts this far
   function accent(){ color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#5B4FD6'; }
   accent();
@@ -2482,6 +2484,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     speed += (Math.min(1, v/14) - speed)*0.2;
     if(v > 0.6) heading = Math.atan2(vy, vx);
     if(now - lastMove > 700) live = false;
+    cv.style.opacity = document.querySelector(TOP_LAYER) ? '0.25' : '1';
 
     // which dots are strand anchors this frame: one per (spoke, ring), pushed
     // out ahead of the pointer and pulled in behind it
@@ -2493,7 +2496,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       const along = Math.cos(a - heading);
       if(!live || (speed > 0.45 && along < -0.35)){ slots[k] = []; continue; }   // behind or idle: let it retract
       for(let ri=0;ri<RINGS.length;ri++){
-        const r = RINGS[ri]*(1 + 0.6*speed*along);
+        const r = RINGS[ri]*(1 + 0.45*speed*along);
         const gx = x + Math.cos(a)*r, gy = y + Math.sin(a)*r;
         let d = slots[k][ri];
         // keep the current anchor while it is still near its ideal spot, so
@@ -2530,7 +2533,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         const sx = n.dir > 0 ? par[0] : n.x, sy = n.dir > 0 ? par[1] : n.y;
         const ex = n.dir > 0 ? n.x : par[0], ey = n.dir > 0 ? n.y : par[1];
         const tt = Math.max(0, Math.min(1, n.t));
-        ctx.globalAlpha = 0.42*tt;
+        ctx.globalAlpha = 0.3*tt;
         ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + (ex-sx)*tt, sy + (ey-sy)*tt); ctx.stroke();
       });
       // ring threads between neighbouring anchors, with a slight sag toward the pointer
@@ -2541,26 +2544,17 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
           const t = Math.min(A.n.t, B.n.t);
           if(t < 0.5) continue;
           const mx = (A.x+B.x)/2 + (x - (A.x+B.x)/2)*0.12, my = (A.y+B.y)/2 + (y - (A.y+B.y)/2)*0.12;
-          ctx.globalAlpha = (0.36 - ri*0.05)*t;
+          ctx.globalAlpha = (0.26 - ri*0.04)*t;
           ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.quadraticCurveTo(mx, my, B.x, B.y); ctx.stroke();
         }
       }
       // dew on every anchored dot
       nodes.forEach(n=>{
         if(n.t < 0.5) return;
-        ctx.globalAlpha = 0.6*n.t;
-        ctx.beginPath(); ctx.arc(n.x, n.y, 2, 0, 6.283); ctx.fill();
+        ctx.globalAlpha = 0.45*n.t;
+        ctx.beginPath(); ctx.arc(n.x, n.y, 1.6, 0, 6.283); ctx.fill();
       });
       ctx.globalAlpha = 1;
-      // over real content (cards, tiles, the branch column) the web is only a
-      // faint trace, so it never hides details; on the open backdrop it stays strong
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(0,0,0,' + CONTENT_FADE + ')';
-      document.querySelectorAll(CONTENT_SEL).forEach(el=>{
-        const r = el.getBoundingClientRect();
-        if(r.width && r.bottom > 0 && r.top < H && r.right > 0 && r.left < W) ctx.fillRect(r.left, r.top, r.width, r.height);
-      });
-      ctx.globalCompositeOperation = 'source-over';
     }
     if(live || nodes.size) raf = requestAnimationFrame(frame);
   }
