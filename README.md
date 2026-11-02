@@ -39,6 +39,15 @@ The same map works for Azure DevOps Services (`dev.azure.com`) and Azure DevOps 
 - **Needs:** Azure DevOps Services, or Azure DevOps Server 2020 or newer (the app calls API version 6.0).
 - **Limits:** "Browse my repos" is GitHub only. Up to 1000 branches per repo. If the browser blocks the request (CORS), you'll see a message saying so; on-premises servers may need your admin to allow this page's origin.
 
+### Removing Azure DevOps support
+
+If Azure DevOps doesn't work for you, there are two ways out.
+
+1. **Switch it off (one line).** In `index.html`, near the top of the first `<script>`, change `const FEATURES = { azure: true };` to `{ azure: false }`. Azure repos and the Azure token boxes disappear and the paste-a-URL option is refused. Nothing saved is deleted, so setting it back to `true` restores everything.
+2. **Remove the code.** It all went in as one commit, so it reverts cleanly: find it with `git log --grep "Azure DevOps support"` and run `git revert <that commit>`. To find the pieces by hand instead, search for `AZURE-SUPPORT` in `index.html`.
+
+Either way, saved Azure tokens stay in your browser until you clear them. To wipe them, run `localStorage.removeItem('ghp_azure_tokens')` in the browser console on this page.
+
 ## Known limitation
 
 Because it relies on the browser's own `fetch()`, this doesn't work as a

@@ -662,6 +662,7 @@ footer.note .mono{color:var(--text-3);}
         <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off">
         <div class="hint">Stored only in this browser's local storage. Never sent anywhere except directly to api.github.com, and never saved into this page. A fine-grained token scoped to just the repos below, with Contents: Read-only, is enough.</div>
       </div>
+      <!-- AZURE-SUPPORT -->
       <div class="settingsField" id="azureTokenField">
         <label>Azure DevOps access tokens</label>
         <div id="azureTokenList"></div>
@@ -695,6 +696,13 @@ footer.note .mono{color:var(--text-3);}
 </div>
 
 <script>
+// Feature switches. Set azure to false to turn Azure DevOps support off:
+// Azure repos and token boxes disappear from the app, nothing saved is deleted,
+// and setting it back to true restores them. To remove the code entirely, see
+// "Removing Azure DevOps support" in the README. Everything Azure-specific is
+// tagged AZURE-SUPPORT so it can be found with a search.
+const FEATURES = { azure: true };
+
 const PALETTE = ["#6C8EF5","#F5A25D","#5FC7A3","#E76F8B","#9B8AE6","#4FB6C9","#E8C468","#D97BD4","#7FA9E0","#C97D60"];
 
 // =====================================================================
@@ -706,6 +714,8 @@ const Store = (function(){
   const K_TOKEN = 'ghp_token';
   const K_REPOS = 'ghp_repos';        // ["owner/repo", ...]
   const K_LAST  = 'ghp_last_repo';
+  // AZURE-SUPPORT
+  const isAz = id => /^azure:/i.test(id || '');
   const K_AZ_TOKENS = 'ghp_azure_tokens'; // {"https://dev.azure.com/org": token, ...}: one per Azure DevOps host
   const K_CACHE_PREFIX = 'ghp_cache_'; // + repo id -> {data, fetchedAt}
 
@@ -716,14 +726,25 @@ const Store = (function(){
   return {
     getToken(){ return safeGet(K_TOKEN) || ''; },
     setToken(t){ return safeSet(K_TOKEN, t || ''); },
+    // AZURE-SUPPORT: per-server tokens
     getAzureToken(base){ try{ return (JSON.parse(safeGet(K_AZ_TOKENS) || '{}'))[base] || ''; }catch(e){ return ''; } },
     setAzureToken(base, t){
       let m = {}; try{ m = JSON.parse(safeGet(K_AZ_TOKENS) || '{}'); }catch(e){}
       if(t) m[base] = t; else delete m[base];
       return safeSet(K_AZ_TOKENS, JSON.stringify(m));
     },
-    getRepos(){ try{ return JSON.parse(safeGet(K_REPOS) || '[]'); }catch(e){ return []; } },
-    setRepos(list){ return safeSet(K_REPOS, JSON.stringify(list)); },
+    // With FEATURES.azure off, Azure repos are hidden but stay saved, so turning it back on restores them.
+    getRepos(){
+      try{
+        const all = JSON.parse(safeGet(K_REPOS) || '[]');
+        return FEATURES.azure ? all : all.filter(r => !isAz(r));
+      }catch(e){ return []; }
+    },
+    setRepos(list){
+      let hidden = [];
+      if(!FEATURES.azure){ try{ hidden = JSON.parse(safeGet(K_REPOS) || '[]').filter(isAz); }catch(e){} }
+      return safeSet(K_REPOS, JSON.stringify(list.concat(hidden.filter(r => !list.includes(r)))));
+    },
     getLastRepo(){ return safeGet(K_LAST) || ''; },
     setLastRepo(r){ return safeSet(K_LAST, r); },
     getCache(repo){
@@ -899,6 +920,7 @@ const GitHub = (function(){
 })();
 
 // =====================================================================
+// AZURE-SUPPORT (start) — see "Removing Azure DevOps support" in the README
 // AZURE DEVOPS — the same shape as the GitHub module above, for Azure
 // DevOps Services (https://dev.azure.com/{org}) and Azure DevOps Server
 // (on-premises, https://{server}/{collection}). A tracked repo is stored as
@@ -1089,6 +1111,7 @@ const Providers = (function(){
   }
   return { isAzure, client };
 })();
+// AZURE-SUPPORT (end)
 
 // =====================================================================
 // GRAPH PIPELINE — ported from build_graph.py (this session's earlier,
@@ -1530,6 +1553,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   const settingsBackdrop = document.getElementById('settingsBackdrop');
   function openSettings(){
     document.getElementById('tokenInput').value = Store.getToken();
+    document.getElementById('addRepoInput').placeholder = FEATURES.azure ? 'owner/repo, or an Azure DevOps repo URL' : 'owner/repo';
     renderRepoListSettings();
     renderAzureTokens();
     document.getElementById('browseRepoPanel').style.display = 'none';
@@ -1585,6 +1609,12 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     errEl.style.display = 'none';
     let id = null;
     if(/^https?:\/\//i.test(val)){
+      // AZURE-SUPPORT
+      if(!FEATURES.azure){
+        errEl.textContent = 'Azure DevOps support is turned off in this copy. Enter a GitHub repo as owner/repo.';
+        errEl.style.display = 'block';
+        return;
+      }
       id = Azure.idFromWebUrl(val);
       if(!id){
         errEl.textContent = 'Paste the repo\'s web address, e.g. https://dev.azure.com/org/project/_git/repo';
@@ -1616,7 +1646,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // had to be re-entered on every visit even though it had been typed in.
   // One token box per Azure DevOps server among the tracked repos (cloud and
   // on-premises servers each need their own token).
+  // AZURE-SUPPORT
   function renderAzureTokens(){
+    document.getElementById('azureTokenField').style.display = FEATURES.azure ? '' : 'none';
     const list = document.getElementById('azureTokenList');
     const hint = document.getElementById('azureTokenHint');
     const hosts = [...new Set(Store.getRepos().filter(Providers.isAzure).map(r=>{ const p = Azure.parseId(r); return p && p.baseUrl; }).filter(Boolean))];
@@ -2663,7 +2695,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // ---- boot ----
   populateRepoSelect();
   if(!Store.getRepos().some(r=> Providers.client(r).token())){
-    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add an access token (GitHub or Azure DevOps) and your first repo.</div>`);
+    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add an access token and your first repo.</div>`);
   } else {
     maybeAutoLoad();
   }
