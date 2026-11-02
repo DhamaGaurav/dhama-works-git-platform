@@ -666,6 +666,7 @@ footer.note .mono{color:var(--text-3);}
       <div class="settingsField" id="azureTokenField">
         <label>Azure DevOps access tokens</label>
         <div id="azureTokenList"></div>
+        <div class="hint" id="azureHelperNote"></div>
         <div class="hint" id="azureTokenHint">Add an Azure DevOps repo below and a token box for its server appears here. Use a personal access token with Code: Read. Stored only in this browser and sent only to that server.</div>
       </div>
       <div class="settingsField">
@@ -932,6 +933,11 @@ const GitHub = (function(){
 // =====================================================================
 const Azure = (function(){
   const API_VERSION = '6.0'; // Azure DevOps Services and Server 2020 or newer
+  // AZURE-SUPPORT: when this page is served by the optional local helper (node serve.js),
+  // it sets window.__HELPER and Azure requests go through it, same-origin, so the
+  // browser's CORS check never applies. Opened straight from a file, requests go direct.
+  const HELPER = !!window.__HELPER;
+  const viaHelper = url => { const u = new URL(url); return '/_az/' + u.protocol.replace(':', '') + '/' + u.host + u.pathname + u.search; };
 
   function makeId(baseUrl, project, repo){
     return 'azure:' + baseUrl.replace(/\/+$/, '') + '/' + encodeURIComponent(project) + '/' + encodeURIComponent(repo);
@@ -973,13 +979,22 @@ const Azure = (function(){
   async function req(url, token){
     let res;
     try{
-      res = await fetch(withVersion(url), { headers: {
+      const target = withVersion(url);
+      res = await fetch(HELPER ? viaHelper(target) : target, { headers: {
         'Accept': 'application/json',
         'Authorization': 'Basic ' + btoa(':' + token),
       }});
     } catch(e){
-      const err = new Error('Couldn\'t reach Azure DevOps from this page. The browser may have blocked the request (CORS) or the network is down. For an on-premises server, your admin may need to allow this page\'s origin.');
+      const err = new Error(HELPER
+        ? 'Couldn\'t reach the local helper. Is "node serve.js" still running?'
+        : 'Couldn\'t reach Azure DevOps from this page. The browser may have blocked the request (CORS) or the network is down. You can run the local helper (node serve.js, then open http://localhost:8765, see the README) or ask your admin to allow this page\'s origin.');
       err.status = 0; throw err;
+    }
+    // the helper reports its own problems (host not allowed, certificate, timeout, redirect) in plain words
+    if(HELPER && res.headers.get('x-helper-error')){
+      const j = await res.json().catch(() => ({}));
+      const err = new Error(j.error || 'The local helper could not reach the server.');
+      err.status = res.status === 401 ? 401 : 502; throw err;
     }
     // A rejected token often comes back as 203 with an HTML sign-in page, not a 401.
     const isJson = (res.headers.get('content-type') || '').toLowerCase().includes('json');
@@ -1068,7 +1083,7 @@ const Azure = (function(){
     }));
   }
 
-  return { makeId, parseId, idFromWebUrl, label, getRepoInfo, getAllBranches, getAllCommits, getPulls, getCommitFiles };
+  return { HELPER, makeId, parseId, idFromWebUrl, label, getRepoInfo, getAllBranches, getAllCommits, getPulls, getCommitFiles };
 })();
 
 // =====================================================================
@@ -1649,6 +1664,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // AZURE-SUPPORT
   function renderAzureTokens(){
     document.getElementById('azureTokenField').style.display = FEATURES.azure ? '' : 'none';
+    document.getElementById('azureHelperNote').textContent = Azure.HELPER
+      ? 'Running through the local helper (serve.js): Azure DevOps requests go via this computer, so browser CORS blocks do not apply.'
+      : 'If your browser blocks Azure DevOps requests (CORS), run the local helper: node serve.js, then open http://localhost:8765. See the README.';
     const list = document.getElementById('azureTokenList');
     const hint = document.getElementById('azureTokenHint');
     const hosts = [...new Set(Store.getRepos().filter(Providers.isAzure).map(r=>{ const p = Azure.parseId(r); return p && p.baseUrl; }).filter(Boolean))];
