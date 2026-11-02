@@ -452,6 +452,16 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   padding:9px 10px; border:1px solid var(--border); border-radius:10px; margin-bottom:6px;
   font-family:'JetBrains Mono',monospace; font-size:12px;
 }
+.provToggle{display:flex; gap:4px; padding:4px; margin-bottom:16px; background:var(--surface-2); border:1px solid var(--border); border-radius:999px;}
+.provToggle button{
+  flex:1; min-height:40px; border:0; border-radius:999px; background:transparent; color:var(--text-2);
+  font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+}
+.provToggle button:hover{color:var(--text);}
+.provToggle button[aria-selected="true"]{background:var(--accent); color:#fff;}
+.provToggle .cnt{font-family:'JetBrains Mono',monospace; font-weight:500; opacity:.75; margin-left:4px;}
+.provToggle .cnt:empty{display:none;}
+[role="tabpanel"][hidden]{display:none;}
 .settingsField{margin-bottom:14px;}
 .settingsField label{display:block; font-size:11.5px; font-weight:700; color:var(--text-2); margin-bottom:6px; text-transform:uppercase; letter-spacing:.03em;}
 .settingsField input[type="text"], .settingsField input[type="password"]{
@@ -652,38 +662,59 @@ footer.note .mono{color:var(--text-3);}
     <div class="phead2">
       <div>
         <div class="pname" style="font-family:'Manrope',sans-serif;">Settings</div>
-        <div class="pmeta">GitHub and Azure DevOps connections for this platform</div>
+        <div class="pmeta">Connect a GitHub or Azure DevOps repo</div>
       </div>
       <button class="drawerClose" id="closeSettings" aria-label="Close">&times;</button>
     </div>
     <div class="pbody">
-      <div class="settingsField">
-        <label>GitHub personal access token</label>
-        <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off">
-        <div class="hint">Stored only in this browser's local storage. Never sent anywhere except directly to api.github.com, and never saved into this page. A fine-grained token scoped to just the repos below, with Contents: Read-only, is enough.</div>
+      <!-- AZURE-SUPPORT: the toggle only shows when FEATURES.azure is on -->
+      <div class="provToggle" id="provToggle" role="tablist" aria-label="Connect to">
+        <button type="button" role="tab" id="provTabGithub" data-prov="github" aria-selected="true" aria-controls="provGithub">GitHub <span class="cnt" id="provCntGithub"></span></button>
+        <button type="button" role="tab" id="provTabAzure" data-prov="azure" aria-selected="false" aria-controls="provAzure">Azure DevOps <span class="cnt" id="provCntAzure"></span></button>
       </div>
-      <!-- AZURE-SUPPORT -->
-      <div class="settingsField" id="azureTokenField">
-        <label>Azure DevOps access tokens</label>
-        <div id="azureTokenList"></div>
-        <div class="hint" id="azureHelperNote"></div>
-        <div class="hint" id="azureTokenHint">Add an Azure DevOps repo below and a token box for its server appears here. Use a personal access token with Code: Read. Stored only in this browser and sent only to that server.</div>
-      </div>
-      <div class="settingsField">
-        <label>Tracked repositories</label>
-        <div id="repoListSettings"></div>
-        <div class="addRepoRow">
-          <input type="text" id="addRepoInput" placeholder="owner/repo, or an Azure DevOps repo URL">
-          <button class="btn primary" id="addRepoBtn">Add</button>
+
+      <div id="provGithub" role="tabpanel" aria-labelledby="provTabGithub">
+        <div class="settingsField">
+          <label for="tokenInput">Personal access token</label>
+          <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off">
+          <div class="hint">Needs Contents: Read-only on the repos you add. Stored only in this browser; sent only to api.github.com.</div>
         </div>
-        <div class="hint" id="addRepoErr" style="color:var(--crit); display:none;"></div>
-        <button class="btn" id="browseReposBtn" style="margin-top:10px; width:100%;">Browse my GitHub repos&hellip;</button>
-        <div class="hint" id="browseRepoErr" style="color:var(--crit); display:none; margin-top:8px;"></div>
-        <div id="browseRepoPanel" style="display:none; margin-top:10px;">
-          <input type="text" id="browseRepoSearch" placeholder="Filter by name" class="mono"
-            style="width:100%; font-size:12px; background:var(--surface-2); border:1px solid var(--border);
-                   border-radius:9px; padding:8px 10px; color:var(--text); margin-bottom:8px;">
-          <div id="browseRepoList" style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;"></div>
+        <div class="settingsField">
+          <label for="addRepoInput">Repositories</label>
+          <div id="repoListSettings"></div>
+          <div class="addRepoRow">
+            <input type="text" id="addRepoInput" placeholder="owner/repo">
+            <button class="btn primary" id="addRepoBtn">Add</button>
+          </div>
+          <div class="hint" id="addRepoErr" style="color:var(--crit); display:none;"></div>
+          <button class="btn" id="browseReposBtn" style="margin-top:10px; width:100%;">Browse my GitHub repos&hellip;</button>
+          <div class="hint" id="browseRepoErr" style="color:var(--crit); display:none; margin-top:8px;"></div>
+          <div id="browseRepoPanel" style="display:none; margin-top:10px;">
+            <input type="text" id="browseRepoSearch" placeholder="Filter by name" class="mono"
+              style="width:100%; font-size:12px; background:var(--surface-2); border:1px solid var(--border);
+                     border-radius:9px; padding:8px 10px; color:var(--text); margin-bottom:8px;">
+            <div id="browseRepoList" style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AZURE-SUPPORT -->
+      <div id="provAzure" role="tabpanel" aria-labelledby="provTabAzure" hidden>
+        <div class="settingsField">
+          <label for="azureAddInput">Repositories</label>
+          <div id="azureRepoList"></div>
+          <div class="addRepoRow">
+            <input type="text" id="azureAddInput" placeholder="https://dev.azure.com/org/project/_git/repo">
+            <button class="btn primary" id="azureAddBtn">Add</button>
+          </div>
+          <div class="hint" id="azureAddErr" style="color:var(--crit); display:none;"></div>
+          <div class="hint">Paste the repo's address from your browser. Cloud and on-premises servers both work.</div>
+        </div>
+        <div class="settingsField">
+          <label>Access tokens</label>
+          <div id="azureTokenList"></div>
+          <div class="hint" id="azureTokenHint">A box appears here for each server you add. Use a personal access token with Code: Read. Stored only in this browser; sent only to that server.</div>
+          <div class="hint" id="azureHelperNote"></div>
         </div>
       </div>
     </div>
@@ -746,6 +777,8 @@ const Store = (function(){
       if(!FEATURES.azure){ try{ hidden = JSON.parse(safeGet(K_REPOS) || '[]').filter(isAz); }catch(e){} }
       return safeSet(K_REPOS, JSON.stringify(list.concat(hidden.filter(r => !list.includes(r)))));
     },
+    getSettingsProv(){ return safeGet('ghp_settings_prov') || ''; },   // which Settings tab was last open
+    setSettingsProv(p){ return safeSet('ghp_settings_prov', p); },
     getLastRepo(){ return safeGet(K_LAST) || ''; },
     setLastRepo(r){ return safeSet(K_LAST, r); },
     getCache(repo){
@@ -1568,9 +1601,10 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   const settingsBackdrop = document.getElementById('settingsBackdrop');
   function openSettings(){
     document.getElementById('tokenInput').value = Store.getToken();
-    document.getElementById('addRepoInput').placeholder = FEATURES.azure ? 'owner/repo, or an Azure DevOps repo URL' : 'owner/repo';
     renderRepoListSettings();
     renderAzureTokens();
+    // open on the tab last used, else the one for the repo currently on screen
+    showProvider(Store.getSettingsProv() || (Providers.isAzure(repoSelect.value) ? 'azure' : 'github'));
     document.getElementById('browseRepoPanel').style.display = 'none';
     document.getElementById('browseRepoSearch').value = '';
     document.getElementById('browseRepoErr').style.display = 'none';
@@ -1587,12 +1621,35 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     closeDrawer(); closePopup(); closeSettings();
   });
 
-  function renderRepoListSettings(){
-    const el = document.getElementById('repoListSettings');
-    const repos = Store.getRepos();
+  // GitHub / Azure DevOps toggle: only the relevant settings show for the chosen service.
+  function showProvider(p){
+    if(!FEATURES.azure) p = 'github';
+    if(p !== 'azure') p = 'github';
+    const toggle = document.getElementById('provToggle');
+    toggle.style.display = FEATURES.azure ? '' : 'none';     // AZURE-SUPPORT
+    [['github','provGithub','provTabGithub'], ['azure','provAzure','provTabAzure']].forEach(([key, panel, tab])=>{
+      document.getElementById(panel).hidden = key !== p;
+      const t = document.getElementById(tab);
+      t.setAttribute('aria-selected', key === p ? 'true' : 'false');
+      t.tabIndex = key === p ? 0 : -1;
+    });
+    ['addRepoErr', 'azureAddErr', 'browseRepoErr'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+    Store.setSettingsProv(p);
+  }
+  document.getElementById('provToggle').addEventListener('click', e=>{
+    const b = e.target.closest('[data-prov]'); if(b) showProvider(b.dataset.prov);
+  });
+  document.getElementById('provToggle').addEventListener('keydown', e=>{
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const next = document.getElementById('provTabGithub').getAttribute('aria-selected') === 'true' ? 'azure' : 'github';
+    showProvider(next);
+    document.getElementById(next === 'azure' ? 'provTabAzure' : 'provTabGithub').focus();
+  });
+
+  function renderRepoRows(el, repos, emptyText){
     el.innerHTML = '';
     if(!repos.length){
-      el.innerHTML = `<div class="hint">No repos yet — add one below.</div>`;
+      el.innerHTML = `<div class="hint">${emptyText}</div>`;
       return;
     }
     repos.forEach(r=>{
@@ -1600,7 +1657,6 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       row.className = 'settingsRepo';
       const nameEl = document.createElement('span');
       nameEl.textContent = Providers.client(r).label;
-      nameEl.title = Providers.client(r).service;
       row.appendChild(nameEl);
       const rm = document.createElement('button');
       rm.className = 'btn danger';
@@ -1616,41 +1672,64 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       el.appendChild(row);
     });
   }
+  // each service's list shows only its own repos; the counts sit on the toggle
+  function renderRepoListSettings(){
+    const all = Store.getRepos();
+    const gh = all.filter(r => !Providers.isAzure(r)), az = all.filter(Providers.isAzure);
+    renderRepoRows(document.getElementById('repoListSettings'), gh, 'No GitHub repos yet. Add one below.');
+    renderRepoRows(document.getElementById('azureRepoList'), az, 'No Azure DevOps repos yet. Add one below.');
+    document.getElementById('provCntGithub').textContent = gh.length || '';
+    document.getElementById('provCntAzure').textContent = az.length || '';
+  }
 
-  document.getElementById('addRepoBtn').addEventListener('click', ()=>{
-    const input = document.getElementById('addRepoInput');
-    const errEl = document.getElementById('addRepoErr');
-    const val = input.value.trim();
-    errEl.style.display = 'none';
-    let id = null;
-    if(/^https?:\/\//i.test(val)){
-      // AZURE-SUPPORT
-      if(!FEATURES.azure){
-        errEl.textContent = 'Azure DevOps support is turned off in this copy. Enter a GitHub repo as owner/repo.';
-        errEl.style.display = 'block';
-        return;
-      }
-      id = Azure.idFromWebUrl(val);
-      if(!id){
-        errEl.textContent = 'Paste the repo\'s web address, e.g. https://dev.azure.com/org/project/_git/repo';
-        errEl.style.display = 'block';
-        return;
-      }
-    } else if(/^[\w.-]+\/[\w.-]+$/.test(val)){
-      id = val;
-    } else {
-      errEl.textContent = 'Enter a GitHub repo as owner/repo (e.g. DhamaGaurav/PaisaFetch) or paste an Azure DevOps repo URL.';
-      errEl.style.display = 'block';
-      return;
-    }
+  function addRepoId(id){
     const repos = Store.getRepos();
     if(!repos.includes(id)) repos.push(id);
     Store.setRepos(repos);
-    input.value = '';
     renderRepoListSettings();
     renderAzureTokens();
     populateRepoSelect();
+  }
+  function showErr(id, msg){ const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+
+  document.getElementById('addRepoBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('addRepoInput');
+    const val = input.value.trim();
+    document.getElementById('addRepoErr').style.display = 'none';
+    if(/^https?:\/\//i.test(val)){
+      showErr('addRepoErr', FEATURES.azure
+        ? 'That looks like a web address. For Azure DevOps, switch to the Azure DevOps tab above.'
+        : 'Enter a GitHub repo as owner/repo, e.g. DhamaGaurav/PaisaFetch.');
+      return;
+    }
+    if(!/^[\w.-]+\/[\w.-]+$/.test(val)){
+      showErr('addRepoErr', 'Enter it as owner/repo, e.g. DhamaGaurav/PaisaFetch.');
+      return;
+    }
+    input.value = '';
+    addRepoId(val);
   });
+
+  // AZURE-SUPPORT
+  document.getElementById('azureAddBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('azureAddInput');
+    const val = input.value.trim();
+    document.getElementById('azureAddErr').style.display = 'none';
+    if(!FEATURES.azure){ showErr('azureAddErr', 'Azure DevOps support is turned off in this copy.'); return; }
+    const id = /^https?:\/\//i.test(val) ? Azure.idFromWebUrl(val) : null;
+    if(!id){
+      showErr('azureAddErr', 'Paste the repo\'s web address, e.g. https://dev.azure.com/org/project/_git/repo');
+      return;
+    }
+    input.value = '';
+    addRepoId(id);
+    // take the person straight to the token box for this server if it is still empty
+    const ref = Azure.parseId(id);
+    const empty = [...document.querySelectorAll('#azureTokenList input')].find(i => i.dataset.base === (ref && ref.baseUrl) && !i.value);
+    if(empty) empty.focus();
+  });
+  document.getElementById('azureAddInput').addEventListener('keydown', e=>{ if(e.key === 'Enter') document.getElementById('azureAddBtn').click(); });
+  document.getElementById('addRepoInput').addEventListener('keydown', e=>{ if(e.key === 'Enter') document.getElementById('addRepoBtn').click(); });
 
   // Save the token to localStorage as soon as it's typed, the same way a
   // tracked repo is saved the instant "Add" is clicked — not only when
@@ -1663,10 +1742,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // on-premises servers each need their own token).
   // AZURE-SUPPORT
   function renderAzureTokens(){
-    document.getElementById('azureTokenField').style.display = FEATURES.azure ? '' : 'none';
     document.getElementById('azureHelperNote').textContent = Azure.HELPER
-      ? 'Running through the local helper (serve.js): Azure DevOps requests go via this computer, so browser CORS blocks do not apply.'
-      : 'If your browser blocks Azure DevOps requests (CORS), run the local helper: node serve.js, then open http://localhost:8765. See the README.';
+      ? 'Running through the local helper (serve.js), so browser CORS blocks do not apply.'
+      : 'Blocked by your browser (CORS)? Run the local helper: node serve.js, then open http://localhost:8765. See the README.';
     const list = document.getElementById('azureTokenList');
     const hint = document.getElementById('azureTokenHint');
     const hosts = [...new Set(Store.getRepos().filter(Providers.isAzure).map(r=>{ const p = Azure.parseId(r); return p && p.baseUrl; }).filter(Boolean))];
@@ -1680,6 +1758,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       const inp = document.createElement('input');
       inp.type = 'password'; inp.autocomplete = 'off'; inp.placeholder = 'Personal access token (Code: Read)';
       inp.setAttribute('aria-label', 'Access token for ' + base);
+      inp.dataset.base = base;
       inp.value = Store.getAzureToken(base);
       inp.addEventListener('input', ()=> Store.setAzureToken(base, inp.value.trim()));
       wrap.appendChild(lbl); wrap.appendChild(inp);
