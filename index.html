@@ -78,14 +78,38 @@ body{
 #laneSvg .breathe{animation:breathe 5s ease-in-out infinite;}
 body.awake #laneSvg .breathe{animation-duration:3.6s;}
 #laneSvg .settleRing{animation:ripple 1.2s ease-out 1 forwards;}
-.kolamThread{display:block; width:100%; height:14px; margin-top:-8px; opacity:0; transition:opacity .25s ease; flex:none; pointer-events:none;}
-.kolamThread path{fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; vector-effect:non-scaling-stroke; stroke-dasharray:1; stroke-dashoffset:1;}
-body.working .kolamThread{opacity:1;}
-body.working .kolamThread path{animation:threadDraw 1.6s ease-in-out infinite;}
-.iconBtn.spin .refreshIcon{animation:none !important;}
+/* Kolam rope rail under the header: two twisted strands, faint at rest,
+   drawn in the accent while loading, with the spider perched on it. */
+.ropeRail{position:relative; height:32px; margin-top:-8px; flex:none; pointer-events:none;}
+.kolamThread{position:absolute; left:0; right:0; bottom:0; width:100%; height:14px;}
+.kolamThread path{fill:none; stroke:var(--text-3); opacity:.4; stroke-width:1.8; stroke-linecap:round; vector-effect:non-scaling-stroke;}
+body.working .kolamThread path{stroke:var(--accent); opacity:1; stroke-dasharray:1; stroke-dashoffset:1; animation:threadDraw 1.6s ease-in-out infinite;}
+.spider{position:absolute; bottom:5px; left:5%; width:34px; height:30px; margin-left:-17px; color:var(--text);}
+.spider svg{display:block; width:100%; height:100%; overflow:visible;}
+.spider .legs{stroke:currentColor; stroke-width:1.5; fill:none; stroke-linecap:round; stroke-linejoin:round; transform-box:fill-box; transform-origin:center;}
+.spider .body{fill:currentColor;} .spider .eye{fill:var(--surface);} .spider .mark{fill:var(--accent);}
+.spider .head{transform-box:fill-box; transform-origin:50% 100%;}
+.spider .eye{transform-box:fill-box; transform-origin:center; animation:blink 6s ease-in-out infinite;}
+.spider .head{animation:tilt 9s ease-in-out infinite;}
+@keyframes blink{0%,94%,100%{transform:scaleY(1);} 97%{transform:scaleY(.1);}}
+@keyframes tilt{0%,70%,100%{transform:rotate(0);} 78%,90%{transform:rotate(-12deg);}}
+@keyframes wiggle{0%,100%{transform:scaleX(1);} 50%{transform:scaleX(1.06);}}
+@keyframes scurry{from{left:5%;} to{left:94%;}}
+header.top:hover .spider .head{animation-duration:3s;}
+header.top:hover .spider .legs{animation:wiggle .5s ease-in-out infinite;}
+body.working .spider{animation:scurry 3.2s ease-in-out infinite alternate;}
+#webCanvas{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none;}
+.wrap{position:relative; z-index:1;}
+:root{--surface-glass:color-mix(in srgb, var(--surface) 90%, transparent);}
+.panel, .drawer{background:var(--surface-glass) !important;}
+.kolamDivider{display:block; width:140px; height:14px; margin:0 auto 10px;}
+.kolamDivider path{fill:none; stroke:var(--text-3); opacity:.5; stroke-width:1.8; stroke-linecap:round;}
+.pulliRow{display:flex; gap:10px; justify-content:center; margin-bottom:6px;}
+.pulliRow i{width:5px; height:5px; border-radius:50%; background:var(--text-3); opacity:.5;}
 @media (prefers-reduced-motion:reduce){
-  #laneSvg .breathe, #laneSvg .settleRing, body.working .kolamThread path{animation:none !important;}
+  #laneSvg .breathe, #laneSvg .settleRing, body.working .kolamThread path, .spider, .spider *{animation:none !important;}
   body.working .kolamThread path{stroke-dashoffset:0;}
+  #webCanvas{display:none;}
 }
 
 /* header */
@@ -460,10 +484,78 @@ footer.note .mono{color:var(--text-3);}
 ::-webkit-scrollbar{width:10px; height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--border); border-radius:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
+
+/* Person details: full-screen drill-down opened from the History header
+   once someone is selected in "Committed by". Cards sit on the same Kolam
+   dot field as the map. */
+.pview{
+  position:fixed; inset:0; z-index:70; overflow-y:auto; display:none;
+  background-color:var(--bg);
+  background-image:radial-gradient(circle, var(--dot) 1.3px, transparent 1.8px), radial-gradient(circle, var(--dot) 1.3px, transparent 1.8px);
+  background-size:32px 32px, 32px 32px; background-position:0 0, 16px 16px;
+}
+.pview.show{display:block;}
+.pwrap{max-width:1120px; margin:0 auto; padding:24px 24px 56px; display:flex; flex-direction:column; gap:18px;}
+.ptop{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+.ptop .btn{min-height:44px; padding:0 18px; border-radius:22px;}
+.ptabs{display:flex; gap:6px; flex-wrap:wrap; flex:1;}
+.ptabs .chip{min-height:36px; display:inline-flex; align-items:center; font-size:12.5px; padding:0 14px;}
+.pwho h2{margin:0; font-size:28px; font-weight:800; letter-spacing:-0.01em;}
+.pwho .sub{color:var(--text-2); font-size:13.5px; margin-top:4px;}
+.ptiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px;}
+.ptile{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow);}
+.ptile .n{font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;}
+.ptile .l{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2); margin-top:4px;}
+.ptile .s{font-size:11px; color:var(--text-3); margin-top:2px;}
+.pcard{background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow); padding:18px 20px; min-width:0;}
+.pcard h3{margin:0 0 4px; font-size:15px; font-weight:800;}
+.pcard .hint{font-size:12.5px; color:var(--text-2); margin-bottom:12px;}
+.pcols{display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:18px;}
+.pbar{display:block; width:100%; height:72px;}
+.pbar rect{fill:var(--accent);}
+.pbarAxis{display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-3); margin-top:4px;}
+.pbr{border:1px solid var(--border); border-radius:14px; margin-bottom:8px; background:var(--surface); overflow:hidden;}
+.pbrHead{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap; width:100%; min-height:52px; padding:8px 14px;
+  background:none; border:0; text-align:left; color:var(--text); font-family:inherit; cursor:pointer;
+}
+.pbrHead:hover{background:var(--surface-2);}
+.pbrHead .nm{font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 180px;}
+.pbrHead .chev{font-size:10px; color:var(--text-3); transition:transform .15s ease; flex:none;}
+.pbr.open .chev{transform:rotate(90deg);}
+.pbrHead .meta{font-size:12px; color:var(--text-2); font-variant-numeric:tabular-nums;}
+.pbrBody{display:none; border-top:1px solid var(--border); padding:10px 14px 14px; background:var(--bg);}
+.pbr.open .pbrBody{display:block;}
+.pcm{display:flex; gap:10px; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
+.pcm:last-child{border-bottom:none;}
+.pcm .d{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-3); flex:none; width:78px;}
+.pcm .t{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.pcm .a{font-size:11px; color:var(--text-3); flex:none; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.pcm.mine .t{font-weight:700;}
+.pcm.mine .a{color:var(--accent); font-weight:700;}
+.pcm:not(.mine){opacity:.7;}
+.pfiles{margin-top:10px; font-size:12px;}
+.pfiles table, .ptable{width:100%; border-collapse:collapse; font-size:12.5px;}
+.pfiles td, .pfiles th, .ptable td, .ptable th{padding:5px 6px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top;}
+.ptable th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2);}
+.ptable .num, .pfiles .num{font-family:'JetBrains Mono',monospace; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+.add{color:var(--good);} .del{color:var(--crit);}
+.pnoteLine{font-size:12px; color:var(--text-3); margin-top:8px;}
+.pbtn{min-height:40px; padding:0 16px; border-radius:20px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer;}
+.pbtn:hover{border-color:var(--accent); color:var(--accent);}
+.pbtn:disabled{opacity:.6; cursor:default;}
+.pill{font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap;}
+.pill.merged{background:var(--good-soft); color:var(--good);}
+.pill.open{background:var(--accent-soft); color:var(--accent);}
+.pill.warn{background:var(--warn-soft); color:var(--warn);}
+.pill.crit{background:var(--crit-soft); color:var(--crit);}
+.pill.pr{background:var(--surface-2); color:var(--text-2); border:1px solid var(--border);}
+.pbr .prTitle{flex-basis:100%; font-size:12.5px; color:var(--text-2); padding-left:20px;}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 
+<canvas id="webCanvas" aria-hidden="true"></canvas>
 <div class="wrap">
   <header class="top">
     <div class="topBar">
@@ -479,7 +571,10 @@ footer.note .mono{color:var(--text-3);}
         <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
       </div>
     </div>
-    <svg class="kolamThread" viewBox="0 0 1860 14" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M0 7 q15 -12 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0"/></svg>
+    <div class="ropeRail">
+      <svg class="kolamThread" viewBox="0 0 1860 14" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M0 7 q15 -12 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0"/><path pathLength="1" d="M0 7 q15 12 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0"/></svg>
+      <div class="spider" id="spider"><svg viewBox="0 0 34 30" role="img" aria-label="Spider mascot, perched on the rope"><g class="legs"><path d="M13 14 L5 8 L2 12"/><path d="M13 16 L4 15 L1 20"/><path d="M13 18 L5 22 L3 27"/><path d="M14 20 L9 25 L8 29"/><path d="M21 14 L29 8 L32 12"/><path d="M21 16 L30 15 L33 20"/><path d="M21 18 L29 22 L31 27"/><path d="M20 20 L25 25 L26 29"/></g><ellipse class="body" cx="17" cy="19" rx="6.5" ry="7.5"/><path class="mark" d="M17 15.5 L19 19 L17 22.5 L15 19 Z"/><g class="head"><circle class="body" cx="17" cy="9.5" r="4.2"/><circle class="eye" cx="15.2" cy="8.8" r="1.1"/><circle class="eye" cx="18.8" cy="8.8" r="1.1"/></g></svg></div>
+    </div>
   </header>
 
   <div class="grid">
@@ -487,6 +582,7 @@ footer.note .mono{color:var(--text-3);}
       <div class="phead">
         <h2>History</h2>
         <div class="filters" id="graphModeRow"></div>
+        <button class="btn primary" id="personDetailsBtn" style="display:none;">Person details</button>
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
         <select class="branchHiSelect" id="branchHighlightSelect" title="Highlight a branch's path, dim everything else"><option value="">Highlight branch&hellip;</option></select>
@@ -582,6 +678,7 @@ footer.note .mono{color:var(--text-3);}
   </div>
 
   <footer class="note" id="footerNote"></footer>
+  <div class="pview" id="personView" role="dialog" aria-label="Person details"></div>
 </div>
 
 <script>
@@ -754,7 +851,31 @@ const GitHub = (function(){
     return out;
   }
 
-  return { getRepoInfo, getAllBranches, getAllCommits, getUserRepos };
+  // On-request only (see Person details): one paginated call for all pull
+  // requests, and one call per commit for the files it changed.
+  async function getPulls(owner, repo, token){
+    let path = `/repos/${owner}/${repo}/pulls?state=all&per_page=100`;
+    const out = [];
+    let guard = 0;
+    while(path && guard < 5){
+      guard++;
+      const res = await req(path, token);
+      const json = await res.json();
+      for(const p of json) out.push({
+        number: p.number, title: p.title, url: p.html_url, branch: p.head && p.head.ref,
+        state: p.merged_at ? 'merged' : p.state, user: p.user && p.user.login,
+      });
+      path = parseNextLink(res.headers.get('link'));
+    }
+    return out;
+  }
+  async function getCommitFiles(owner, repo, sha, token){
+    const res = await req(`/repos/${owner}/${repo}/commits/${sha}`, token);
+    const json = await res.json();
+    return (json.files || []).map(f=> ({ filename: f.filename, additions: f.additions, deletions: f.deletions, status: f.status }));
+  }
+
+  return { getRepoInfo, getAllBranches, getAllCommits, getUserRepos, getPulls, getCommitFiles };
 })();
 
 // =====================================================================
@@ -1454,6 +1575,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // ---- main render ----
   function applyData(data, meta, fetchedAtISO){
     DATA = data;
+    currentMeta = meta;
+    pvPulls = null; pvPullsErr = ''; pvFiles = {}; pvOpen = new Set(); pvNote = '';
+    closePerson();
     clearCenterState();
     activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set(); highlightPathSet = null;
     branchQuery = ''; showAllOpen = false; showMerged = false;
@@ -1478,6 +1602,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     renderBranchList();
     renderGraphModeToggle();
     renderAuthorFilters();
+    syncPersonBtn();
     renderBranchHighlightSelect();
     renderGraph('condensed');
     settle();
@@ -1604,6 +1729,270 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       branchListEl.appendChild(h);
       if(open_) merged.forEach(b=> branchListEl.appendChild(branchCard(b)));
     }
+  }
+
+  // =====================================================================
+  // PERSON DETAILS — full-screen drill-down for whoever is selected in
+  // "Committed by". Everything on first open comes from the data already
+  // loaded (no GitHub calls). Pull requests and files touched cost extra
+  // API calls, so they only load when asked, and are cached in memory.
+  // =====================================================================
+  const pv = document.getElementById('personView');
+  const personBtn = document.getElementById('personDetailsBtn');
+  let pvPerson = null;
+  let pvOpen = new Set();          // expanded branch names
+  let pvPulls = null;              // null = not loaded, else {byBranch, count}
+  let pvPullsErr = '';
+  let pvFiles = {};                // commit sha -> files[] (loaded on request)
+  let pvBusy = '';                 // what is loading right now, for button state
+  let pvNote = '';                 // progress / error text for on-request loads
+  const FILES_PER_BRANCH_CAP = 20;
+  let currentMeta = null;
+
+  function fmtDay(iso){ return new Date(iso).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}); }
+  function fmtShort(iso){ return new Date(iso).toLocaleDateString('en-IN', {day:'numeric', month:'short'}); }
+
+  function personData(name){
+    const nodes = DATA.full ? DATA.full.nodes : [];
+    const owner = DATA.owner_by_sha || {};
+    const by = {};
+    nodes.forEach(n=>{
+      const b = owner[n.sha] || '(unattributed)';
+      const rec = (by[b] ||= {name:b, all:[], mine:[]});
+      rec.all.push(n);
+      if(n.author === name) rec.mine.push(n);
+    });
+    const branches = Object.values(by).filter(r=> r.mine.length).map(r=>{
+      const meta = byName[r.name] || null;
+      const others = {};
+      r.all.forEach(n=>{ if(n.author !== name) others[n.author] = (others[n.author]||0) + 1; });
+      return Object.assign(r, {meta, others});
+    }).sort((a,b)=> new Date(b.mine[0].date) - new Date(a.mine[0].date));
+    const mine = nodes.filter(n=> n.author === name);
+    const collab = {};
+    branches.forEach(r=> Object.keys(r.others).forEach(o=>{
+      const c = (collab[o] ||= {name:o, shared:0, theirCommits:0});
+      c.shared++; c.theirCommits += r.others[o];
+    }));
+    const dates = mine.map(n=> new Date(n.date).getTime());
+    return {
+      name, mine, branches,
+      merges: mine.filter(n=> n.is_merge).length,
+      first: dates.length ? new Date(Math.min(...dates)).toISOString() : null,
+      last: dates.length ? new Date(Math.max(...dates)).toISOString() : null,
+      collaborators: Object.values(collab).sort((a,b)=> b.shared - a.shared || b.theirCommits - a.theirCommits),
+    };
+  }
+
+  function timelineSvg(mine){
+    if(!mine.length) return '';
+    const day = d=> Math.floor(new Date(d).getTime() / 86400000);
+    const counts = {};
+    mine.forEach(n=>{ const k = day(n.date); counts[k] = (counts[k]||0) + 1; });
+    const keys = Object.keys(counts).map(Number);
+    const lo = Math.min(...keys), hi = Math.max(...keys);
+    const span = Math.min(hi - lo + 1, 120);
+    const start = hi - span + 1;
+    const max = Math.max(...Object.values(counts));
+    const bw = Math.min(720 / span, 22); // few active days: keep bars slim, not slabs
+    let bars = '';
+    for(let i=0;i<span;i++){
+      const c = counts[start + i] || 0;
+      if(!c) continue;
+      const h = Math.max(4, Math.round(c / max * 60));
+      bars += `<rect x="${(i*bw + 0.5).toFixed(2)}" y="${66-h}" width="${Math.max(1.5, bw-1).toFixed(2)}" height="${h}" rx="1.5"><title>${fmtShort(new Date((start+i)*86400000).toISOString())}: ${c} commit${c>1?'s':''}</title></rect>`;
+    }
+    return `<svg class="pbar" viewBox="0 0 720 70" preserveAspectRatio="none" role="img" aria-label="Commits per day, ${span} days"><line x1="0" y1="67" x2="720" y2="67" stroke="var(--border)"/>${bars}</svg>
+      <div class="pbarAxis"><span>${fmtShort(new Date(start*86400000).toISOString())}</span><span>busiest day: ${max} commit${max>1?'s':''}</span><span>${fmtShort(new Date(hi*86400000).toISOString())}</span></div>`;
+  }
+
+  function statusPills(r){
+    const b = r.meta; if(!b) return '';
+    let s = b.merged_into_main ? '<span class="pill merged">merged</span>' : `<span class="pill open">open · ${b.ahead_of_main} ahead</span>`;
+    if(b.recommendation === 'needs-decision') s += '<span class="pill crit">unmerged &amp; stale</span>';
+    else if(b.recommendation === 'safe-to-delete') s += '<span class="pill warn">cleanup</span>';
+    else if(!b.merged_into_main && (b.tier === 'aging' || b.tier === 'stale')) s += `<span class="pill warn">${b.tier}</span>`;
+    return s;
+  }
+
+  function folderOf(path){
+    const parts = path.split('/');
+    if(parts.length === 1) return '(root)';
+    return parts.slice(0, Math.min(2, parts.length - 1)).join('/');
+  }
+  function areaRows(shas){
+    const areas = {};
+    shas.forEach(sha=> (pvFiles[sha] || []).forEach(f=>{
+      const a = (areas[folderOf(f.filename)] ||= {area:folderOf(f.filename), files:new Set(), add:0, del:0});
+      a.files.add(f.filename); a.add += f.additions||0; a.del += f.deletions||0;
+    }));
+    return Object.values(areas).sort((x,y)=> y.files.size - x.files.size || (y.add+y.del) - (x.add+x.del));
+  }
+  function areaTable(rows){
+    return `<table class="ptable"><thead><tr><th>Area</th><th class="num">Files</th><th class="num">Added</th><th class="num">Removed</th></tr></thead><tbody>${
+      rows.map(a=>`<tr><td class="mono">${escapeHtml(a.area)}</td><td class="num">${a.files.size}</td><td class="num add">+${a.add}</td><td class="num del">&minus;${a.del}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
+  const filesTargets = r=> r.mine.filter(n=> !n.is_merge).slice(0, FILES_PER_BRANCH_CAP);
+
+  function branchBlock(r, p){
+    const open = pvOpen.has(r.name);
+    const pr = pvPulls && pvPulls.byBranch[r.name];
+    const last = r.mine[0] ? fmtShort(r.mine[0].date) : '';
+    const collabN = Object.keys(r.others).length;
+    let html = `<div class="pbr${open ? ' open' : ''}" data-branch="${escapeHtml(r.name)}">
+      <button class="pbrHead" data-act="toggle" aria-expanded="${open}">
+        <span class="chev">&#9656;</span><span class="nm" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</span>
+        ${statusPills(r)}
+        ${pr ? `<span class="pill pr">PR #${pr.number} ${escapeHtml(pr.state)}</span>` : ''}
+        <span class="meta">${r.mine.length} of ${r.all.length} commits · ${collabN ? collabN + ' other' + (collabN>1?'s':'') : 'solo'} · ${last}</span>
+        ${pr ? `<span class="prTitle">${escapeHtml(pr.title)}</span>` : ''}
+      </button>`;
+    if(open){
+      const loaded = filesTargets(r).filter(n=> pvFiles[n.sha]);
+      html += `<div class="pbrBody">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+          <button class="pbtn" data-act="branchFiles" data-branch="${escapeHtml(r.name)}" ${pvBusy ? 'disabled' : ''}>${loaded.length ? 'Refresh' : 'Load'} files this person changed</button>
+          <span class="pnoteLine" style="margin:0;">${filesTargets(r).length} commit${filesTargets(r).length===1?'':'s'}, one GitHub call each${r.mine.filter(n=>!n.is_merge).length > FILES_PER_BRANCH_CAP ? ' (newest ' + FILES_PER_BRANCH_CAP + ' only)' : ''}</span>
+          ${pr ? `<a class="pbtn" style="display:inline-flex;align-items:center;text-decoration:none;" href="${escapeHtml(pr.url)}" target="_blank" rel="noopener">Open PR on GitHub</a>` : ''}
+        </div>
+        ${loaded.length ? `<div class="pfiles">${areaTable(areaRows(loaded.map(n=>n.sha)))}</div>` : ''}
+        <h3 style="font-size:12px; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2);">All ${r.all.length} commits on this branch</h3>
+        ${r.all.map(n=>`<div class="pcm${n.author === p.name ? ' mine' : ''}"><span class="d">${fmtShort(n.date)}</span><span class="t" title="${escapeHtml(n.subject)}">${escapeHtml(n.subject)}</span><span class="a">${escapeHtml(n.author)}</span></div>`).join('')}
+      </div>`;
+    }
+    return html + '</div>';
+  }
+
+  function renderPerson(){
+    if(!DATA || !pvPerson) return;
+    const p = personData(pvPerson);
+    const merged = p.branches.filter(r=> r.meta && r.meta.merged_into_main).length;
+    const openB = p.branches.length - merged;
+    const prCount = pvPulls ? p.branches.filter(r=> pvPulls.byBranch[r.name]).length : null;
+    const allLoadedShas = p.branches.flatMap(r=> filesTargets(r).filter(n=> pvFiles[n.sha]).map(n=> n.sha));
+    const totalTargets = p.branches.reduce((a,r)=> a + filesTargets(r).filter(n=> !pvFiles[n.sha]).length, 0);
+    const tabs = [...authorFilter].map(n=>`<button class="chip" data-act="person" data-name="${escapeHtml(n)}" aria-pressed="${n===pvPerson}">${escapeHtml(n)}</button>`).join('');
+
+    pv.innerHTML = `<div class="pwrap">
+      <div class="ptop">
+        <button class="btn" data-act="back">&larr; Back to map</button>
+        <div class="ptabs">${tabs}</div>
+      </div>
+      <div class="pwho"><h2>${escapeHtml(p.name)}</h2>
+        <div class="sub">${p.first ? `${fmtDay(p.first)} to ${fmtDay(p.last)}` : 'No commits'} in <span class="mono">${escapeHtml(currentMeta ? currentMeta.fullName : '')}</span></div></div>
+      <div class="ptiles">
+        <div class="ptile"><div class="n">${p.mine.length}</div><div class="l">Commits</div><div class="s">${p.merges} merge${p.merges===1?'':'s'}</div></div>
+        <div class="ptile"><div class="n">${p.branches.length}</div><div class="l">Branches</div><div class="s">${prCount === null ? 'each branch = one feature' : prCount + ' with a pull request'}</div></div>
+        <div class="ptile"><div class="n">${openB}</div><div class="l">Still open</div><div class="s">${p.branches.filter(r=> r.meta && r.meta.recommendation === 'needs-decision').length} unmerged &amp; stale</div></div>
+        <div class="ptile"><div class="n">${merged}</div><div class="l">Merged</div></div>
+        <div class="ptile"><div class="n">${p.collaborators.length}</div><div class="l">Collaborators</div><div class="s">on shared branches</div></div>
+      </div>
+      <div class="pcard"><h3>Activity</h3><div class="hint">Commits per day (up to the latest 120 days of activity).</div>${timelineSvg(p.mine)}</div>
+      <div class="pcols">
+        <div class="pcard" style="grid-column:1 / -1;">
+          <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; justify-content:space-between;">
+            <div><h3>Branches this person worked on</h3><div class="hint">Newest first. Open one to see every commit on it and the files changed.</div></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="pbtn" data-act="expandAll">${pvOpen.size >= p.branches.length ? 'Collapse all' : 'Expand all'}</button>
+              <button class="pbtn" data-act="loadPulls" ${pvBusy || pvPulls ? 'disabled' : ''}>${pvPulls ? 'Pull requests loaded' : 'Load pull requests'}</button>
+            </div>
+          </div>
+          ${pvPullsErr ? `<div class="errBox" style="max-width:none; margin:0 0 10px;">${escapeHtml(pvPullsErr)}</div>` : ''}
+          ${p.branches.map(r=> branchBlock(r, p)).join('') || '<div class="pnoteLine">No branches found for this person.</div>'}
+        </div>
+        <div class="pcard"><h3>Collaborators</h3><div class="hint">Other people who committed on the same branches, most shared first.</div>
+          ${p.collaborators.length ? `<table class="ptable"><thead><tr><th>Person</th><th class="num">Shared branches</th><th class="num">Their commits</th></tr></thead><tbody>${
+            p.collaborators.slice(0, 15).map(c=>`<tr><td>${escapeHtml(c.name)}</td><td class="num">${c.shared}</td><td class="num">${c.theirCommits}</td></tr>`).join('')}</tbody></table>${p.collaborators.length > 15 ? `<div class="pnoteLine">+ ${p.collaborators.length - 15} more</div>` : ''}` : '<div class="pnoteLine">Worked alone on every branch.</div>'}
+        </div>
+        <div class="pcard"><h3>Areas touched</h3><div class="hint">Folders this person changed. Loads on request: one GitHub call per commit.</div>
+          <button class="pbtn" data-act="allFiles" ${pvBusy || !totalTargets ? 'disabled' : ''}>${totalTargets ? `Load files for all branches (${totalTargets} calls)` : (allLoadedShas.length ? 'All loaded' : 'Nothing to load')}</button>
+          ${allLoadedShas.length ? `<div class="pfiles">${areaTable(areaRows(allLoadedShas))}</div>` : ''}
+        </div>
+      </div>
+      ${pvNote ? `<div class="pnoteLine" role="status">${escapeHtml(pvNote)}</div>` : ''}
+    </div>`;
+  }
+
+  function openPerson(name){
+    if(!DATA) return;
+    pvPerson = name || [...authorFilter][0];
+    if(!pvPerson) return;
+    pv.classList.add('show');
+    renderPerson();
+    pv.scrollTop = 0;
+  }
+  function closePerson(){ pv.classList.remove('show'); pv.innerHTML = ''; }
+
+  async function loadPulls(){
+    const token = Store.getToken();
+    if(!token || !currentMeta) return;
+    pvBusy = 'pulls'; pvPullsErr = ''; pvNote = 'Loading pull requests…'; renderPerson();
+    try{
+      const list = await GitHub.getPulls(currentMeta.owner, currentMeta.repo, token);
+      const byBranch = {};
+      list.forEach(pr=>{ if(!byBranch[pr.branch] || pr.number > byBranch[pr.branch].number) byBranch[pr.branch] = pr; });
+      pvPulls = {byBranch, count: list.length};
+      pvNote = `Loaded ${list.length} pull request${list.length===1?'':'s'}.`;
+    } catch(err){
+      pvPullsErr = err.status === 403 || err.status === 404
+        ? 'Pull requests need the token\'s "Pull requests: Read-only" permission. Branches still work without it.'
+        : (err.message || String(err));
+      pvNote = '';
+    }
+    pvBusy = ''; renderPerson();
+  }
+
+  async function loadFiles(shas){
+    const token = Store.getToken();
+    if(!token || !currentMeta) return;
+    const todo = shas.filter(s=> !pvFiles[s]);
+    pvBusy = 'files';
+    let done = 0;
+    try{
+      for(const sha of todo){
+        pvNote = `Loading files… ${done}/${todo.length}`; renderPerson();
+        pvFiles[sha] = await GitHub.getCommitFiles(currentMeta.owner, currentMeta.repo, sha, token);
+        done++;
+      }
+      pvNote = `Loaded files for ${done} commit${done===1?'':'s'}.`;
+    } catch(err){
+      pvNote = 'Stopped: ' + (err.message || err);
+    }
+    pvBusy = ''; renderPerson();
+  }
+
+  pv.addEventListener('click', ev=>{
+    const el = ev.target.closest('[data-act]');
+    if(!el) return;
+    const act = el.dataset.act;
+    if(act === 'back') closePerson();
+    else if(act === 'person'){ pvPerson = el.dataset.name; renderPerson(); }
+    else if(act === 'toggle'){
+      const name = el.closest('.pbr').dataset.branch;
+      if(pvOpen.has(name)) pvOpen.delete(name); else pvOpen.add(name);
+      renderPerson();
+    }
+    else if(act === 'expandAll'){
+      const p = personData(pvPerson);
+      if(pvOpen.size >= p.branches.length) pvOpen.clear(); else p.branches.forEach(r=> pvOpen.add(r.name));
+      renderPerson();
+    }
+    else if(act === 'loadPulls') loadPulls();
+    else if(act === 'branchFiles'){
+      const r = personData(pvPerson).branches.find(x=> x.name === el.dataset.branch);
+      if(r) loadFiles(filesTargets(r).map(n=> n.sha));
+    }
+    else if(act === 'allFiles'){
+      const p = personData(pvPerson);
+      loadFiles(p.branches.flatMap(r=> filesTargets(r).map(n=> n.sha)));
+    }
+  });
+  personBtn.addEventListener('click', ()=> openPerson());
+  document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && pv.classList.contains('show')) closePerson(); });
+  function syncPersonBtn(){
+    personBtn.style.display = authorFilter.size ? '' : 'none';
+    personBtn.textContent = authorFilter.size > 1 ? `Details for ${authorFilter.size} people` : 'Person details';
   }
 
   // Settle: one ring leaves the default branch's tip, then back to Rest.
@@ -1905,6 +2294,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     });
     updateDimming();
     redrawLanes(); // graph lines and dots follow the person filter too
+    syncPersonBtn();
   }
 
   // "Highlight branch" selector: picking a branch walks its full ancestry
@@ -2018,12 +2408,73 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // ---- boot ----
   populateRepoSelect();
   if(!Store.getToken() || !Store.getRepos().length){
-    setCenterState(`<div class="big">Welcome to your git platform</div><div>Open Settings to add a GitHub token and your first repo.</div>`);
+    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add a GitHub token and your first repo.</div>`);
   } else {
     maybeAutoLoad();
   }
 
   // exposed for local testing only — not part of the app's own behavior
   window.__gitPlatformDebug = { buildGraphData, GitHub, Store, applyData, loadRepo };
+})();
+</script>
+
+<script>
+// Cursor web: a spider web spins itself around the pointer on the Kolam
+// backdrop and fades once the pointer rests. Drawn on a canvas behind the
+// cards; skipped under Reduce Motion, and idle (no frames) when faded out.
+(function(){
+  const cv = document.getElementById('webCanvas');
+  if(!cv || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+  function size(){
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = innerWidth; H = innerHeight;
+    cv.width = W*dpr; cv.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  size(); addEventListener('resize', size);
+  const SPOKES = 11, RINGS = [0.22, 0.42, 0.64, 0.88], R = 190;
+  const wob = Array.from({length:SPOKES}, (_,i)=> 0.86 + 0.14*Math.abs(Math.sin(i*2.7 + 1)));
+  let tx = -999, ty = -999, x = -999, y = -999, strength = 0, last = 0, raf = 0, color = '';
+  function accent(){ color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#5B4FD6'; }
+  accent();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', accent);
+  addEventListener('mousemove', e=>{
+    if(x < -900){ x = e.clientX; y = e.clientY; }
+    tx = e.clientX; ty = e.clientY; last = performance.now();
+    if(!raf) raf = requestAnimationFrame(frame);
+  }, {passive:true});
+  document.addEventListener('mouseleave', ()=>{ last = 0; });
+  function pt(i, f){ const a = i/SPOKES*Math.PI*2 - Math.PI/2; return [x + Math.cos(a)*R*f*wob[i], y + Math.sin(a)*R*f*wob[i]]; }
+  function frame(now){
+    raf = 0;
+    x += (tx - x)*0.18; y += (ty - y)*0.18;
+    const live = last && now - last < 900;
+    strength += ((live ? 1 : 0) - strength)*(live ? 0.12 : 0.05);
+    ctx.clearRect(0,0,W,H);
+    if(strength > 0.02){
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.5*strength; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for(let i=0;i<SPOKES;i++){ const p = pt(i,1); ctx.moveTo(x,y); ctx.lineTo(p[0],p[1]); }
+      ctx.stroke();
+      RINGS.forEach((f,ri)=>{
+        ctx.globalAlpha = (0.42 - ri*0.07)*strength;
+        ctx.beginPath();
+        for(let i=0;i<SPOKES;i++){
+          const a = pt(i,f), b = pt((i+1)%SPOKES,f);
+          const mx = (a[0]+b[0])/2 + (x - (a[0]+b[0])/2)*0.14, my = (a[1]+b[1])/2 + (y - (a[1]+b[1])/2)*0.14;
+          if(i===0) ctx.moveTo(a[0],a[1]);
+          ctx.quadraticCurveTo(mx,my,b[0],b[1]);
+        }
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 0.6*strength;
+      RINGS.forEach(f=>{ for(let i=0;i<SPOKES;i+=2){ const p = pt(i,f); ctx.beginPath(); ctx.arc(p[0],p[1],1.5,0,6.283); ctx.fill(); } });
+      ctx.globalAlpha = 1;
+    }
+    if(live || strength > 0.02) raf = requestAnimationFrame(frame);
+  }
 })();
 </script>

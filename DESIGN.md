@@ -27,18 +27,26 @@ The app must stay readable with many people, parallel branches and several merge
 - People: "Committed by" chips filter history; the tip commit's author shows on each branch card.
 - Not built yet: a lane cap with "show merged lanes", grouping open branches by person, a "Mine" filter, avatars with initials, paged history ("Load older commits").
 
-## Kolam backdrop
-A quiet staggered pulli dot field behind everything (`--dot`, 10% light / 7% dark). It never sits under text: cards are solid surfaces on top of it.
+## Kolam and life (reference: Gloss, not a copy)
+- **Dot field**: a quiet staggered pulli dot field behind everything (`--dot`, 10% light / 7% dark). Cards are 90% opaque surfaces on top of it, so the field and the cursor web show faintly through.
+- **Cursor web**: a spider web (11 spokes, 4 sagging rings, dew dots) spins itself around the pointer, eases after it, and fades about a second after the pointer rests. Canvas behind the cards; it draws no frames while faded out, and is off under Reduce Motion.
+- **Rope rail**: two twisted strands under the header (a sine pair, never eye-shaped loops). Faint at rest; drawn in the accent while loading.
+- **Rest**: the default branch's tip node breathes (5 s cycle). The spider blinks about every 6 s and tilts its head about every 9 s.
+- **Wake**: hovering, scrolling or touching the graph quickens the breathing (3.6 s) for about 1.4 s. Hovering the header makes the spider wiggle its legs and tilt faster.
+- **Work**: while loading, the rope draws itself and the spider scurries along it. The refresh icon holds still (no spinner).
+- **Settle**: one ring leaves the tip node when new data lands, then back to Rest.
+- Reduce Motion turns all of it off.
 
-## Motion (living design)
-- Rest: the default branch's tip node breathes (5 s cycle).
-- Wake: hovering, scrolling or touching the graph quickens it (3.6 s) for about 1.4 s.
-- Work: while loading, a Kolam thread under the header draws itself; the refresh icon holds still (no spinner).
-- Settle: one ring leaves the tip node when new data lands, then back to Rest.
-- Reduce Motion turns all of it off. Off-screen pausing is left to the browser.
+## Character: the spider
+- Ink body, an accent hourglass mark, eight legs, two paper eyes; about 34px.
+- Lives permanently on the rope rail in the top bar, as the crow does in Gloss. The logo is separate and is never replaced by the mascot.
+- It is the screen's one character moment, so it does not appear in cards, the Person details screen, or empty states. The first-run welcome gets a small rope-and-pulli Kolam divider, not a second spider.
 
-## Character
-The Kolam dot field is the only motif in the app so far (the web-mark logo is not added yet). No mascot in empty states.
+## Person details (drill-down)
+A "Person details" button appears in the History header once someone is picked in "Committed by" (it reads "Details for N people" for several). It opens a full-screen view with a Back button and a tab per selected person.
+- Free, from the loaded data: commits and merges, branches (each branch counts as one feature), open vs merged, unmerged and stale flags, collaborators, an activity chart, and per branch the full commit list with this person's commits in bold.
+- On request only, each cached in memory for the session: pull requests (one paginated call; shows PR number, state and title on each branch; needs the token's "Pull requests: Read-only") and files changed (one call per commit, newest 20 per branch, shown as folders with file counts and added/removed lines).
+- Anything that costs an API call states its cost on the button before it runs.
 
 ## Rules
 - Evolve, don't replace: logic and data model are untouched; only tokens, layout and components change.
