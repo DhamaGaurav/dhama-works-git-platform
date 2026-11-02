@@ -60,3 +60,4 @@ A "Person details" button appears in the empty gap of the History header (betwee
 - 2026-11-02: Spider under the header subtitle (left, on the rope) was rejected; moved to the refresh button, top right. Web must expand toward pointer movement, collapse behind it, and stick to the backdrop's Kolam dots.
 - 2026-11-02: The web hid details over content, so it is masked faint over cards. The Person details button must appear in empty space without moving any existing button, filter or card: it is positioned out of flow in the header gap (checked: zero elements move).
 - 2026-11-02: The web was still too prominent. Made it smaller and sparser, moved it back to the bottom layer behind the cards, and added the extra fade under layer-2 surfaces.
+- 2026-11-02: Azure DevOps support added without changing the look. Provider is invisible in the UI apart from the repo label, the footer ("Live from Azure DevOps") and dashes where Azure reports no line counts.
