@@ -79,7 +79,7 @@ function proxy(req, res, url){
     // A rejected token often redirects to a sign-in page; the browser would follow it cross-origin. Report it plainly instead.
     if(ures.statusCode >= 300 && ures.statusCode < 400){ ures.resume(); return fail(res, 401, 'The server redirected to a sign-in page, so it did not accept the token.'); }
     const out = { 'Cache-Control': 'no-store' };
-    ['content-type', 'x-ms-continuationtoken'].forEach(h => { if(ures.headers[h]) out[h] = ures.headers[h]; });
+    ['content-type', 'x-ms-continuationtoken', 'www-authenticate'].forEach(h => { if(ures.headers[h]) out[h] = ures.headers[h]; });
     res.writeHead(ures.statusCode, out);
     ures.pipe(res);
   });
