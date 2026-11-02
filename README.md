@@ -37,6 +37,22 @@ Works with Azure DevOps Services (`dev.azure.com`, `*.visualstudio.com`) and Azu
 - **Person details:** pull requests are Azure's own, matched to branches by name. Files changed are listed per commit, but Azure doesn't report line counts, so added and removed show a dash.
 - **Limits:** "Browse my repos" is GitHub only. Up to 1000 branches per repo.
 
+### Token not accepted?
+
+If you see "Azure DevOps did not accept the token", open Settings, Azure DevOps and press **Test** next to that server's token. It asks the server who the token signs in as, then tells you what the server actually answered and what to check. The usual causes:
+
+- **Token created in a different organisation** (cloud). Create it in the same organisation as the repo, with Organization set to that organisation or "All accessible organizations", and the scope **Code: Read**. Check it hasn't expired.
+- **Windows sign-in only** (some on-premises servers). The server asks for Kerberos or NTLM and doesn't offer token sign-in. Ask your admin whether personal access tokens are turned on.
+- **Your organisation blocks personal access tokens.** An admin can allow them.
+
+To check a token outside the app, run this (it asks for the token without saving it in your shell history; replace `YOUR-ORG`):
+
+```bash
+read -s PAT; curl -s -o /dev/null -w "%{http_code}\n" -u ":$PAT" "https://dev.azure.com/YOUR-ORG/_apis/git/repositories?api-version=6.0"
+```
+
+`200` means the token is fine. `203` or `401` means the server is rejecting it, so the cause is on the token or server side. For an on-premises server, use `https://YOUR-SERVER/YOUR-COLLECTION/_apis/git/repositories?api-version=6.0`.
+
 ### Blocked by your browser (CORS)? Use the local helper
 
 Some Azure DevOps servers, often on-premises ones, don't send the headers a browser needs before it lets a page call them. You'll see "the browser may have blocked the request (CORS)". You don't need your admin to change anything: run the optional helper that lives next to `index.html`.
@@ -65,7 +81,7 @@ Settings shows "Running through the local helper" when it's active. GitHub repos
 | "…certificate this computer's Node doesn't trust" | Start with your company's certificate authority file: `NODE_EXTRA_CA_CERTS=/path/to/ca.pem node serve.js`. As a last resort, `--insecure` skips certificate checks (less safe). |
 | "Couldn't reach the local helper" | It stopped. Start `node serve.js` again. |
 | "Port 8765 is already in use" | `node serve.js --port 8766`, then open that port instead. |
-| "…did not accept the token" | Check the token is correct, not expired, and has Code: Read. |
+| "…did not accept the token" | Press **Test** next to the token in Settings, or see "Token not accepted?" above. |
 | Can't reach the server at all | Check the address, your network or VPN. If your network needs a corporate web proxy, Node won't use it automatically. |
 
 **Safe by design:** it listens on `127.0.0.1` only; forwards only read-only GET requests, only to hosts you allow, and only for the page it serves itself (other websites and odd Host headers are refused); never adds or stores your token (the page sends it); and logs only the method and path.

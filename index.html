@@ -462,6 +462,15 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .provToggle .cnt{font-family:'JetBrains Mono',monospace; font-weight:500; opacity:.75; margin-left:4px;}
 .provToggle .cnt:empty{display:none;}
 [role="tabpanel"][hidden]{display:none;}
+.tokRow{display:flex; gap:6px; align-items:center;}
+.tokRow input{flex:1; min-width:0;}
+.tokRow .btn{flex:none; min-height:40px; padding:0 16px; border-radius:20px;}
+.testResult{font-size:11.5px; line-height:1.5; margin-top:6px; color:var(--text-2);}
+.testResult:empty{display:none;}
+.testResult.good{color:var(--good);}
+.testResult.bad{color:var(--crit);}
+.testResult ul{margin:6px 0 0; padding-left:18px; color:var(--text-2);}
+.testResult li{margin-bottom:4px;}
 .settingsField{margin-bottom:14px;}
 .settingsField label{display:block; font-size:11.5px; font-weight:700; color:var(--text-2); margin-bottom:6px; text-transform:uppercase; letter-spacing:.03em;}
 .settingsField input[type="text"], .settingsField input[type="password"]{
@@ -1009,10 +1018,10 @@ const Azure = (function(){
   const withVersion = url => url + (url.includes('?') ? '&' : '?') + 'api-version=' + API_VERSION;
   const stripHeads = n => (n || '').replace(/^refs\/heads\//, '');
 
-  async function req(url, token){
+  async function req(url, token, opts){
     let res;
     try{
-      const target = withVersion(url);
+      const target = (opts && opts.noVersion) ? url : withVersion(url);
       res = await fetch(HELPER ? viaHelper(target) : target, { headers: {
         'Accept': 'application/json',
         'Authorization': 'Basic ' + btoa(':' + token),
@@ -1030,10 +1039,16 @@ const Azure = (function(){
       err.status = res.status === 401 ? 401 : 502; throw err;
     }
     // A rejected token often comes back as 203 with an HTML sign-in page, not a 401.
-    const isJson = (res.headers.get('content-type') || '').toLowerCase().includes('json');
+    // Some servers answer 200 with a sign-in web page instead of data. Keep what the
+    // server actually said so the person (and "Test connection") can see why.
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    const isJson = contentType.includes('json');
     if(res.status === 401 || res.status === 203 || (res.ok && !isJson)){
-      const err = new Error('Azure DevOps did not accept the token — check it is correct, not expired, and has "Code: Read".');
-      err.status = 401; throw err;
+      const snippet = isJson ? '' : (await res.text().catch(() => '')).replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140);
+      const http = { status: res.status, contentType, wwwAuth: res.headers.get('www-authenticate') || '', snippet };
+      const what = res.status === 203 ? 'a sign-in page' : (res.ok ? 'a web page, not data' : 'HTTP ' + res.status);
+      const err = new Error(`Azure DevOps did not accept the token (the server answered ${what}). Check it is correct, not expired, and has "Code: Read". In Settings, Azure DevOps, press Test for details.`);
+      err.status = 401; err.http = http; throw err;
     }
     if(!res.ok){
       let msg = res.status + ' ' + res.statusText;
@@ -1042,6 +1057,38 @@ const Azure = (function(){
       const err = new Error(msg); err.status = res.status; throw err;
     }
     return res;
+  }
+
+  // "Test connection": ask the server who the token signs in as. connectionData
+  // exists on every version and needs no repo, so it checks the token on its own.
+  async function testConnection(baseUrl, token){
+    try{
+      const res = await req(baseUrl.replace(/\/+$/, '') + '/_apis/connectionData', token, { noVersion: true });
+      const j = await res.json();
+      const u = j.authenticatedUser || {};
+      const user = u.customDisplayName || u.providerDisplayName || '';
+      // a server that answered but doesn't know the token treats the caller as anonymous
+      return user && u.isActive !== false ? { ok: true, user } : { ok: false, anonymous: true };
+    } catch(err){
+      return { ok: false, err };
+    }
+  }
+  // Plain-words next steps for a rejected token, from what the server actually said.
+  function advice(baseUrl, http){
+    let host = ''; try{ host = new URL(baseUrl).hostname; }catch(e){}
+    const cloud = /(^|\.)dev\.azure\.com$|\.visualstudio\.com$/i.test(host);
+    const auth = ((http && http.wwwAuth) || '').toLowerCase();
+    const tips = [];
+    if(/negotiate|ntlm/.test(auth) && !/basic/.test(auth)){
+      tips.push('This server asks for Windows sign-in (Kerberos or NTLM) and does not offer token sign-in. Ask your admin whether personal access tokens are turned on for this Azure DevOps Server.');
+    }
+    if(cloud){
+      tips.push('Create the token in the same organisation as this repo (User settings, Personal access tokens). Set Organization to that organisation or "All accessible organizations", the scope to Code: Read, and check it has not expired. Some organisations block personal access tokens; an admin can allow them.');
+    } else {
+      tips.push('Create the token in this server\'s own web portal (User settings, Personal access tokens) with the scope Code: Read, and check it has not expired. Some servers have token sign-in turned off.');
+    }
+    if(http && http.snippet) tips.push('The server\'s reply began: "' + http.snippet + '"');
+    return tips;
   }
 
   async function getRepoInfo(r, token){
@@ -1116,7 +1163,7 @@ const Azure = (function(){
     }));
   }
 
-  return { HELPER, makeId, parseId, idFromWebUrl, label, getRepoInfo, getAllBranches, getAllCommits, getPulls, getCommitFiles };
+  return { HELPER, testConnection, advice, makeId, parseId, idFromWebUrl, label, getRepoInfo, getAllBranches, getAllCommits, getPulls, getCommitFiles };
 })();
 
 // =====================================================================
@@ -1761,7 +1808,38 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       inp.dataset.base = base;
       inp.value = Store.getAzureToken(base);
       inp.addEventListener('input', ()=> Store.setAzureToken(base, inp.value.trim()));
-      wrap.appendChild(lbl); wrap.appendChild(inp);
+      const test = document.createElement('button');
+      test.type = 'button'; test.className = 'btn'; test.textContent = 'Test';
+      test.title = 'Check this token against ' + base.replace(/^https?:\/\//, '');
+      const result = document.createElement('div');
+      result.className = 'testResult'; result.setAttribute('role', 'status');
+      test.addEventListener('click', async ()=>{
+        const tok = inp.value.trim();
+        result.className = 'testResult'; result.textContent = '';
+        if(!tok){ result.className = 'testResult bad'; result.textContent = 'Enter the token first.'; return; }
+        test.disabled = true; test.textContent = 'Testing…';
+        const r = await Azure.testConnection(base, tok);
+        test.disabled = false; test.textContent = 'Test';
+        result.textContent = '';
+        const line = document.createElement('div');
+        if(r.ok){
+          result.className = 'testResult good';
+          line.textContent = 'Connected' + (r.user ? ' as ' + r.user : '') + '. The token works. Add a repo or press Save & close.';
+          result.appendChild(line);
+        } else {
+          result.className = 'testResult bad';
+          line.textContent = r.anonymous ? 'The server answered, but did not recognise this token (it treated you as signed out).' : (((r.err && r.err.message) || 'The test failed.').replace(/ In Settings, Azure DevOps, press Test for details\./, ''));
+          result.appendChild(line);
+          if(r.anonymous || (r.err && r.err.http)){
+            const ul = document.createElement('ul');
+            Azure.advice(base, r.err && r.err.http).forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+            result.appendChild(ul);
+          }
+        }
+      });
+      const row = document.createElement('div');
+      row.className = 'tokRow'; row.appendChild(inp); row.appendChild(test);
+      wrap.appendChild(lbl); wrap.appendChild(row); wrap.appendChild(result);
       list.appendChild(wrap);
     });
   }
