@@ -1705,6 +1705,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // Re-measures every row's position (heights can change — e.g. a commit
   // description opening/closing) and redraws the SVG lane lines/dots to
   // match, without touching the row DOM itself.
+  function authorOk(n){ return authorFilter.size===0 || (!!n && authorFilter.has(n.author)); }
   function redrawLanes(){
     const ds = currentDS, laneAreaW = currentLaneAreaW;
     if(!ds) return;
@@ -1729,7 +1730,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     ds.edges.forEach(e=>{
       const c = nodeBySha[e.from], p = nodeBySha[e.to];
       if(!c || !p) return;
-      const onPath = !highlightPathSet || (highlightPathSet.has(e.from) && highlightPathSet.has(e.to));
+      // A line is the work of its child (more tip-ward) commit, so it follows
+      // that commit's author when people are selected.
+      const onPath = (!highlightPathSet || (highlightPathSet.has(e.from) && highlightPathSet.has(e.to))) && authorOk(c);
       const x1 = laneX(c.lane), y1 = rowY(c), x2 = laneX(p.lane), y2 = rowY(p);
       const path = document.createElementNS(svgns,'path');
       let d;
@@ -1742,7 +1745,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       }
       path.setAttribute('d', d);
       path.setAttribute('stroke', laneColors[c.lane % laneColors.length]);
-      path.setAttribute('stroke-width', onPath && highlightPathSet ? '3' : '2');
+      path.setAttribute('stroke-width', onPath && (highlightPathSet || authorFilter.size) ? '3' : '2');
       path.setAttribute('fill', 'none');
       path.setAttribute('opacity', onPath ? '0.85' : '0.18');
       svg.appendChild(path);
@@ -1773,7 +1776,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     });
 
     ds.nodes.forEach(n=>{
-      const onPath = !highlightPathSet || highlightPathSet.has(n.sha);
+      const onPath = (!highlightPathSet || highlightPathSet.has(n.sha)) && authorOk(n);
       const circ = document.createElementNS(svgns,'circle');
       circ.setAttribute('cx', laneX(n.lane));
       circ.setAttribute('cy', rowY(n));
@@ -1901,6 +1904,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       ch.setAttribute('aria-pressed', on ? 'true':'false');
     });
     updateDimming();
+    redrawLanes(); // graph lines and dots follow the person filter too
   }
 
   // "Highlight branch" selector: picking a branch walks its full ancestry
@@ -1974,9 +1978,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     [...rowsEl.children].forEach(row=>{
       const sha = row.dataset.sha;
       const n = nodeBySha[sha];
-      const authorOk = authorFilter.size===0 || (n && authorFilter.has(n.author));
+      const authorOk_ = authorOk(n);
       const pathOk = !highlightPathSet || highlightPathSet.has(sha);
-      row.classList.toggle('dim', !(authorOk && pathOk));
+      row.classList.toggle('dim', !(authorOk_ && pathOk));
     });
   }
 
