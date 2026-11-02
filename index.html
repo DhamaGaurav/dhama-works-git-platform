@@ -1,41 +1,41 @@
 <title>Dhama Works Git Platform</title>
 <style>
 :root{
-  --bg:#F7F8F9; --surface:#FFFFFF; --surface-2:#EEF0F5; --border:#DFE3EA;
-  --text:#1B1E27; --text-2:#565D6D; --text-3:#8990A0;
-  --accent:#5B5FEF; --accent-soft:#EDEDFD;
-  --good:#1F9D63; --good-soft:#E4F6EC;
-  --recent:#1E8FA8; --recent-soft:#E3F3F6;
-  --warn:#C97A1F; --warn-soft:#FBEDDB;
-  --crit:#D14343; --crit-soft:#FBE4E4;
-  --lane0:#5B5FEF; --lane1:#B24FE0; --lane2:#E0538E; --lane3:#2FADC9; --lane4:#E0A23A;
-  --shadow: 0 1px 2px rgba(23,26,38,0.06), 0 8px 24px -12px rgba(23,26,38,0.18);
+  --bg:#FBF5EC; --surface:#FFFFFF; --surface-2:#F4ECDD; --border:#E8DDCC;
+  --text:#231E1A; --text-2:#5E544B; --text-3:#6F645A;
+  --accent:#5B4FD6; --accent-soft:#ECE9FA;
+  --good:#2A7F58; --good-soft:#DFF3E8;
+  --recent:#1E7F96; --recent-soft:#DEF1F6;
+  --warn:#A8650F; --warn-soft:#FBEBC9;
+  --crit:#C0392B; --crit-soft:#FBE1DC;
+  --lane0:#5B4FD6; --lane1:#B3389F; --lane2:#E0532F; --lane3:#1E8FA8; --lane4:#C98A12; --dot:rgba(60,40,20,0.10);
+  --shadow: 0 1px 2px rgba(60,40,20,0.06), 0 8px 24px -12px rgba(60,40,20,0.18);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#12141B; --surface:#1A1D27; --surface-2:#20232F; --border:#2C3040;
-    --text:#EAECF2; --text-2:#A6ACBC; --text-3:#767E92;
-    --accent:#8B8FFF; --accent-soft:#262A47;
-    --good:#3FC886; --good-soft:#16301F;
-    --recent:#4FC1DE; --recent-soft:#132A33;
-    --warn:#E8A23F; --warn-soft:#332508;
-    --crit:#F0716D; --crit-soft:#3A1817;
-    --lane0:#8B8FFF; --lane1:#D08CF0; --lane2:#F084AF; --lane3:#5FCBE0; --lane4:#F0BE66;
+    --bg:#17120F; --surface:#211A16; --surface-2:#2A221D; --border:#3A2F28;
+    --text:#F3EADF; --text-2:#BDB0A2; --text-3:#988B7E;
+    --accent:#9C93F2; --accent-soft:#2B2748;
+    --good:#5BC18F; --good-soft:#1B2E24;
+    --recent:#5CC0D8; --recent-soft:#16282E;
+    --warn:#E8A94A; --warn-soft:#34270F;
+    --crit:#F0806F; --crit-soft:#3A1D18;
+    --lane0:#9C93F2; --lane1:#DB78C9; --lane2:#F07F5E; --lane3:#5CC0D8; --lane4:#E4B04A; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#12141B; --surface:#1A1D27; --surface-2:#20232F; --border:#2C3040;
-  --text:#EAECF2; --text-2:#A6ACBC; --text-3:#767E92;
-  --accent:#8B8FFF; --accent-soft:#262A47;
-  --good:#3FC886; --good-soft:#16301F;
-  --recent:#4FC1DE; --recent-soft:#132A33;
-  --warn:#E8A23F; --warn-soft:#332508;
-  --crit:#F0716D; --crit-soft:#3A1817;
-  --lane0:#8B8FFF; --lane1:#D08CF0; --lane2:#F084AF; --lane3:#5FCBE0; --lane4:#F0BE66;
-  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+  --bg:#17120F; --surface:#211A16; --surface-2:#2A221D; --border:#3A2F28;
+    --text:#F3EADF; --text-2:#BDB0A2; --text-3:#988B7E;
+    --accent:#9C93F2; --accent-soft:#2B2748;
+    --good:#5BC18F; --good-soft:#1B2E24;
+    --recent:#5CC0D8; --recent-soft:#16282E;
+    --warn:#E8A94A; --warn-soft:#34270F;
+    --crit:#F0806F; --crit-soft:#3A1D18;
+    --lane0:#9C93F2; --lane1:#DB78C9; --lane2:#F07F5E; --lane3:#5CC0D8; --lane4:#E4B04A; --dot:rgba(243,234,223,0.07);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
   color-scheme: dark;
 }
 *{box-sizing:border-box;}
@@ -46,6 +46,15 @@ body{
   font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   display:flex; flex-direction:column; overflow:hidden;
 }
+/* Kolam backdrop: the shared Dhama Works pulli dot field, staggered rows,
+   kept very quiet so it never competes with the cards sitting on it. */
+body{
+  background-image:
+    radial-gradient(circle, var(--dot) 1.3px, transparent 1.8px),
+    radial-gradient(circle, var(--dot) 1.3px, transparent 1.8px) !important;
+  background-size:32px 32px, 32px 32px !important;
+  background-position:0 0, 16px 16px !important;
+}
 .mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;}
 /* The page itself never scrolls — only bounded regions inside it (the
    History panel's row list, the branch drawer body, etc.) get their own
@@ -53,9 +62,30 @@ body{
    hands the remaining space to .grid/.panel below; changing this back to a
    plain block layout brings back page-level scrolling. */
 .wrap{
-  max-width:1180px; width:100%; margin:0 auto; flex:1; min-height:0;
+  max-width:1440px; width:100%; margin:0 auto; flex:1; min-height:0;
   display:flex; flex-direction:column; overflow:hidden;
   padding-inline:20px; padding-block:24px 20px;
+}
+
+/* Living design. Rest: the default branch's tip node breathes (~5 s).
+   Wake: hovering/scrolling the graph quickens it for ~1.4 s. Work: while
+   loading, the Kolam thread under the header draws itself. Settle: one ring
+   leaves the tip when new data lands. All of it stops under Reduce Motion. */
+@keyframes breathe{0%,100%{transform:scale(1);} 50%{transform:scale(1.35);}}
+@keyframes ripple{from{transform:scale(1); opacity:.55;} to{transform:scale(4.2); opacity:0;}}
+@keyframes threadDraw{0%{stroke-dashoffset:1;} 70%{stroke-dashoffset:0;} 100%{stroke-dashoffset:0;}}
+#laneSvg .breathe, #laneSvg .settleRing{transform-box:fill-box; transform-origin:center;}
+#laneSvg .breathe{animation:breathe 5s ease-in-out infinite;}
+body.awake #laneSvg .breathe{animation-duration:3.6s;}
+#laneSvg .settleRing{animation:ripple 1.2s ease-out 1 forwards;}
+.kolamThread{display:block; width:100%; height:14px; margin-top:-8px; opacity:0; transition:opacity .25s ease; flex:none; pointer-events:none;}
+.kolamThread path{fill:none; stroke:var(--accent); stroke-width:2; stroke-linecap:round; vector-effect:non-scaling-stroke; stroke-dasharray:1; stroke-dashoffset:1;}
+body.working .kolamThread{opacity:1;}
+body.working .kolamThread path{animation:threadDraw 1.6s ease-in-out infinite;}
+.iconBtn.spin .refreshIcon{animation:none !important;}
+@media (prefers-reduced-motion:reduce){
+  #laneSvg .breathe, #laneSvg .settleRing, body.working .kolamThread path{animation:none !important;}
+  body.working .kolamThread path{stroke-dashoffset:0;}
 }
 
 /* header */
@@ -130,7 +160,7 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .drawer .stats{margin-top:0;}
 
 .panel{
-  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  background:var(--surface); border:1px solid var(--border); border-radius:18px;
   box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column;
   flex:1; min-height:0;
 }
@@ -171,6 +201,50 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff;}
 .chip.dot::before{content:''; display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; background:currentColor;}
 
+/* Wide screens: the branch list is a permanent right column beside History
+   (it stays a slide-in drawer on narrow screens, opened by the Branches
+   button). Lane graph and commit rows keep sharing the same rows. */
+@media (min-width:1000px){
+  .grid{flex-direction:row; gap:24px; align-items:stretch;}
+  .grid > .panel{flex:1 1 0; min-width:0;}
+  .drawer{
+    position:static; transform:none; width:380px; max-width:none; flex:none; z-index:auto;
+    border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow);
+    min-height:0; overflow:hidden; transition:none;
+  }
+  .drawer .drawerClose, .drawerBtn{display:none;}
+  #drawerBackdrop{display:none;}
+  .drawer .dbody{flex:1; min-height:0;}
+  #branchList{max-height:none; overflow:visible; padding:8px 0 0;}
+  .drawer .stats{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px;}
+  .drawer .stat{min-width:0; padding:8px 8px; border-radius:10px; box-shadow:none;}
+  .drawer .stat .n{font-size:16px;}
+  .drawer .stat .l{font-size:9px; letter-spacing:.02em; line-height:1.2;}
+}
+.branchSearch{
+  display:flex; align-items:center; gap:8px; margin-top:14px; padding:0 14px; min-height:44px;
+  border:1px solid var(--border); border-radius:22px; background:var(--bg);
+}
+.branchSearch input{
+  flex:1; min-width:0; border:0; background:transparent; outline:none; color:var(--text);
+  font-family:inherit; font-size:14px;
+}
+.groupHead{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+  background:none; border:0; padding:10px 6px 6px; cursor:pointer; color:var(--text-3);
+  font-family:inherit; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+}
+.groupHead:hover{color:var(--text-2);}
+.moreBtn{
+  width:100%; min-height:44px; margin-top:6px; border:1px dashed var(--border); border-radius:22px;
+  background:transparent; color:var(--text-2); font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+}
+.moreBtn:hover{border-color:var(--accent); color:var(--accent);}
+.bauthor{
+  margin-left:auto; flex:none; font-size:10px; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:999px; padding:2px 8px; max-width:110px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
 /* branch list */
 #branchList{max-height:78vh; overflow-y:auto; padding:8px;}
 .bcard{
@@ -405,6 +479,7 @@ footer.note .mono{color:var(--text-3);}
         <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
       </div>
     </div>
+    <svg class="kolamThread" viewBox="0 0 1860 14" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M0 7 q15 -12 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0"/></svg>
   </header>
 
   <div class="grid">
@@ -435,9 +510,6 @@ footer.note .mono{color:var(--text-3);}
         </div>
       </div>
     </section>
-  </div>
-
-  <div class="backdrop" id="drawerBackdrop"></div>
   <aside class="drawer" id="branchDrawer">
     <div class="dhead">
       <h2>Branches</h2>
@@ -445,10 +517,14 @@ footer.note .mono{color:var(--text-3);}
     </div>
     <div class="dbody">
       <div class="stats" id="statsRow"></div>
-      <div class="filters" id="filterRow" style="margin-top:14px;"></div>
+      <div class="branchSearch"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="branchSearch" type="search" placeholder="Search branches or people" aria-label="Search branches or people"></div>
+      <div class="filters" id="filterRow" style="margin-top:12px;"></div>
       <div id="branchList"></div>
     </div>
   </aside>
+  </div>
+
+  <div class="backdrop" id="drawerBackdrop"></div>
 
   <div class="backdrop" id="popupBackdrop"></div>
   <div class="lineTooltip" id="lineTooltip" style="display:none;"></div>
@@ -1043,7 +1119,8 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 </script>
 <script>
 (function(){
-  const LANE_W = 20, LANE_PAD = 14, NODE_R = 4.5;
+  let LANE_W = 20;
+  const LANE_PAD = 14, NODE_R = 4.5, LANE_W_MAX = 20, LANE_W_MIN = 10, LANE_BUDGET = 220;
   const laneColors = ['var(--lane0)','var(--lane1)','var(--lane2)','var(--lane3)','var(--lane4)'];
 
   let DATA = null;
@@ -1053,6 +1130,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   let nodeBySha = {};
   let byName = {};
   let authorFilter = new Set(); // empty = everyone shown
+  let branchQuery = '';
+  let showAllOpen = false, showMerged = false;
+  const OPEN_PAGE = 8;
 
   const rowsEl = document.getElementById('rows');
   const svg = document.getElementById('laneSvg');
@@ -1327,6 +1407,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     // invites repeated clicking. The spin/disable covers every load
     // (startup, repo switch, explicit refresh) so feedback is consistent.
     refreshBtn.classList.add('spin');
+    document.body.classList.add('working');
     refreshBtn.disabled = true;
     refreshBtn.title = 'Fetching from GitHub…';
     if(cached){
@@ -1357,6 +1438,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       }
     } finally {
       refreshBtn.classList.remove('spin');
+      document.body.classList.remove('working');
       refreshBtn.disabled = false;
       refreshBtn.title = 'Refresh from GitHub';
     }
@@ -1374,6 +1456,8 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     DATA = data;
     clearCenterState();
     activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set(); highlightPathSet = null;
+    branchQuery = ''; showAllOpen = false; showMerged = false;
+    const searchEl = document.getElementById('branchSearch'); if(searchEl) searchEl.value = '';
 
     const pageTitleEl = document.getElementById('pageTitle');
     pageTitleEl.textContent = meta.repo + ' Branch Map';
@@ -1396,6 +1480,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     renderAuthorFilters();
     renderBranchHighlightSelect();
     renderGraph('condensed');
+    settle();
 
     byName = {};
     DATA.branches.forEach(b=> byName[b.name] = b);
@@ -1451,29 +1536,108 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     return '';
   }
 
+  function branchAuthor(b){ return b.author || ''; }
+
+  function branchCard(b){
+    const card = document.createElement('div');
+    card.className = 'bcard';
+    card.dataset.tip = b.tip;
+    let badges = '';
+    if(b.merged_into_main) badges += '<span class="badge merged">merged</span>';
+    if(b.ahead_of_main>0) badges += `<span class="badge ahead">${b.ahead_of_main} unique commit${b.ahead_of_main>1?'s':''}</span>`;
+    badges += recBadge(b);
+    const who = branchAuthor(b);
+    card.innerHTML = `
+      <div class="row1"><span class="tierdot ${b.tier}"></span><span class="bname">${escapeHtml(b.name)}</span>${who ? `<span class="bauthor" title="${escapeHtml(who)}">${escapeHtml(who)}</span>` : ''}</div>
+      <div class="bmeta"><span>${relTime(b.date)}</span><span class="mono">${b.tip.slice(0,7)}</span></div>
+      <div class="badgerow">${badges}</div>`;
+    card.addEventListener('click', ()=> openBranchFocus(b.name));
+    return card;
+  }
+
+  // Open branches first (newest activity first, first OPEN_PAGE shown), then
+  // merged branches collapsed behind one header, so 30 people's branches
+  // stay scannable. Search matches branch name or the tip commit's author.
   function renderBranchList(){
     const branchListEl = document.getElementById('branchList');
     branchListEl.innerHTML = '';
-    DATA.branches.filter(b=>{
+    const q = branchQuery.trim().toLowerCase();
+    const list = DATA.branches.filter(b=>{
+      if(q && !(b.name.toLowerCase().includes(q) || branchAuthor(b).toLowerCase().includes(q))) return false;
       if(activeFilter==='all') return true;
       if(activeFilter==='unmerged') return !b.merged_into_main;
       return b.tier === activeFilter;
-    }).forEach(b=>{
-      const card = document.createElement('div');
-      card.className = 'bcard';
-      card.dataset.tip = b.tip;
-      let badges = '';
-      if(b.merged_into_main) badges += '<span class="badge merged">merged</span>';
-      if(b.ahead_of_main>0) badges += `<span class="badge ahead">${b.ahead_of_main} unique commit${b.ahead_of_main>1?'s':''}</span>`;
-      badges += recBadge(b);
-      card.innerHTML = `
-        <div class="row1"><span class="tierdot ${b.tier}"></span><span class="bname">${b.name}</span></div>
-        <div class="bmeta"><span>${relTime(b.date)}</span><span class="mono">${b.tip.slice(0,7)}</span></div>
-        <div class="badgerow">${badges}</div>`;
-      card.addEventListener('click', ()=> openBranchFocus(b.name));
-      branchListEl.appendChild(card);
     });
+    const byDate = (x,y)=> new Date(y.date) - new Date(x.date);
+    const open = list.filter(b=> !b.merged_into_main || b.name === DATA.default_branch).sort(byDate);
+    const merged = list.filter(b=> b.merged_into_main && b.name !== DATA.default_branch).sort(byDate);
+
+    if(!list.length){
+      const empty = document.createElement('div');
+      empty.className = 'pnote';
+      empty.textContent = 'No branches match.';
+      branchListEl.appendChild(empty);
+      return;
+    }
+    const shown = (showAllOpen || q) ? open : open.slice(0, OPEN_PAGE);
+    if(open.length){
+      const h = document.createElement('div');
+      h.className = 'groupHead'; h.style.cursor = 'default';
+      h.innerHTML = `<span>Open &middot; ${open.length}</span>`;
+      branchListEl.appendChild(h);
+    }
+    shown.forEach(b=> branchListEl.appendChild(branchCard(b)));
+    if(shown.length < open.length){
+      const more = document.createElement('button');
+      more.className = 'moreBtn';
+      more.textContent = `Show ${open.length - shown.length} more open branches`;
+      more.addEventListener('click', ()=>{ showAllOpen = true; renderBranchList(); });
+      branchListEl.appendChild(more);
+    }
+    if(merged.length){
+      const open_ = showMerged || !!q;
+      const h = document.createElement('button');
+      h.className = 'groupHead';
+      h.setAttribute('aria-expanded', open_ ? 'true' : 'false');
+      h.innerHTML = `<span>Merged &middot; ${merged.length}</span><span>${open_ ? 'Hide' : 'Show'}</span>`;
+      h.addEventListener('click', ()=>{ showMerged = !showMerged; renderBranchList(); });
+      branchListEl.appendChild(h);
+      if(open_) merged.forEach(b=> branchListEl.appendChild(branchCard(b)));
+    }
   }
+
+  // Settle: one ring leaves the default branch's tip, then back to Rest.
+  function settle(){
+    const tip = svg.querySelector('.breathe');
+    if(!tip) return;
+    const ring = document.createElementNS(svgns,'circle');
+    ['cx','cy'].forEach(a=> ring.setAttribute(a, tip.getAttribute(a)));
+    ring.setAttribute('r', tip.getAttribute('r'));
+    ring.setAttribute('fill','none');
+    ring.setAttribute('stroke', tip.getAttribute('fill'));
+    ring.setAttribute('stroke-width','2');
+    ring.setAttribute('class','settleRing');
+    ring.addEventListener('animationend', ()=> ring.remove());
+    svg.appendChild(ring);
+  }
+
+  // Wake: touching, hovering or scrolling the graph quickens the breathing,
+  // and it calms about 1.4 s after the last touch.
+  (function(){
+    let t = null;
+    const wake = ()=>{
+      document.body.classList.add('awake');
+      clearTimeout(t);
+      t = setTimeout(()=> document.body.classList.remove('awake'), 1400);
+    };
+    const g = document.getElementById('graphScroll');
+    ['mousemove','scroll','touchstart'].forEach(ev=> g.addEventListener(ev, wake, {passive:true}));
+  })();
+
+  document.getElementById('branchSearch').addEventListener('input', e=>{
+    branchQuery = e.target.value;
+    if(DATA) renderBranchList();
+  });
 
   // the currently-expanded commit's sha (only one open at a time), and the
   // dataset/lane-width the graph geometry was last drawn against — kept
@@ -1485,6 +1649,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   function renderGraph(mode){
     graphMode = mode;
     const ds = DATA[mode];
+    // Many people means many parallel lanes: tighten the spacing so the lane
+    // column stays about LANE_BUDGET px wide (never below LANE_W_MIN).
+    LANE_W = Math.max(LANE_W_MIN, Math.min(LANE_W_MAX, Math.floor(LANE_BUDGET/(ds.max_lane+1))));
     const laneAreaW = (ds.max_lane+1)*LANE_W + LANE_PAD;
     currentDS = ds; currentLaneAreaW = laneAreaW;
     expandedSha = null;
@@ -1617,6 +1784,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         circ.setAttribute('stroke', 'var(--surface)');
         circ.setAttribute('stroke-width','2');
       }
+      if(DATA && n.sha === DATA.main_tip) circ.classList.add('breathe');
       svg.appendChild(circ);
     });
 
