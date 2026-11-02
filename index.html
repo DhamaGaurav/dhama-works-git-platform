@@ -575,7 +575,7 @@ footer.note .mono{color:var(--text-3);}
       </div>
       <div class="topRow">
         <select class="repoSelect" id="repoSelect"></select>
-        <span class="refreshWrap"><span class="spider" id="spider"><svg viewBox="0 0 34 30" role="img" aria-label="Spider mascot, perched on the refresh button"><g class="legs"><path d="M13 14 L5 8 L2 12"/><path d="M13 16 L4 15 L1 20"/><path d="M13 18 L5 22 L3 27"/><path d="M14 20 L9 25 L8 29"/><path d="M21 14 L29 8 L32 12"/><path d="M21 16 L30 15 L33 20"/><path d="M21 18 L29 22 L31 27"/><path d="M20 20 L25 25 L26 29"/></g><ellipse class="body" cx="17" cy="19" rx="6.5" ry="7.5"/><path class="mark" d="M17 15.5 L19 19 L17 22.5 L15 19 Z"/><g class="head"><circle class="body" cx="17" cy="9.5" r="4.2"/><circle class="eye" cx="15.2" cy="8.8" r="1.1"/><circle class="eye" cx="18.8" cy="8.8" r="1.1"/></g></svg></span><button class="iconBtn" id="refreshBtn" title="Refresh from GitHub"><span class="refreshIcon">&#8635;</span></button></span>
+        <span class="refreshWrap"><span class="spider" id="spider"><svg viewBox="0 0 34 30" role="img" aria-label="Spider mascot, perched on the refresh button"><g class="legs"><path d="M13 14 L5 8 L2 12"/><path d="M13 16 L4 15 L1 20"/><path d="M13 18 L5 22 L3 27"/><path d="M14 20 L9 25 L8 29"/><path d="M21 14 L29 8 L32 12"/><path d="M21 16 L30 15 L33 20"/><path d="M21 18 L29 22 L31 27"/><path d="M20 20 L25 25 L26 29"/></g><ellipse class="body" cx="17" cy="19" rx="6.5" ry="7.5"/><path class="mark" d="M17 15.5 L19 19 L17 22.5 L15 19 Z"/><g class="head"><circle class="body" cx="17" cy="9.5" r="4.2"/><circle class="eye" cx="15.2" cy="8.8" r="1.1"/><circle class="eye" cx="18.8" cy="8.8" r="1.1"/></g></svg></span><button class="iconBtn" id="refreshBtn" title="Refresh"><span class="refreshIcon">&#8635;</span></button></span>
         <button class="iconBtn" id="openSettings" title="Settings">&#9881;</button>
         <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
       </div>
@@ -652,7 +652,7 @@ footer.note .mono{color:var(--text-3);}
     <div class="phead2">
       <div>
         <div class="pname" style="font-family:'Manrope',sans-serif;">Settings</div>
-        <div class="pmeta">GitHub connection for this platform</div>
+        <div class="pmeta">GitHub and Azure DevOps connections for this platform</div>
       </div>
       <button class="drawerClose" id="closeSettings" aria-label="Close">&times;</button>
     </div>
@@ -662,15 +662,21 @@ footer.note .mono{color:var(--text-3);}
         <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off">
         <div class="hint">Stored only in this browser's local storage. Never sent anywhere except directly to api.github.com, and never saved into this page. A fine-grained token scoped to just the repos below, with Contents: Read-only, is enough.</div>
       </div>
+      <!-- AZURE-SUPPORT -->
+      <div class="settingsField" id="azureTokenField">
+        <label>Azure DevOps access tokens</label>
+        <div id="azureTokenList"></div>
+        <div class="hint" id="azureTokenHint">Add an Azure DevOps repo below and a token box for its server appears here. Use a personal access token with Code: Read. Stored only in this browser and sent only to that server.</div>
+      </div>
       <div class="settingsField">
         <label>Tracked repositories</label>
         <div id="repoListSettings"></div>
         <div class="addRepoRow">
-          <input type="text" id="addRepoInput" placeholder="owner/repo">
+          <input type="text" id="addRepoInput" placeholder="owner/repo, or an Azure DevOps repo URL">
           <button class="btn primary" id="addRepoBtn">Add</button>
         </div>
         <div class="hint" id="addRepoErr" style="color:var(--crit); display:none;"></div>
-        <button class="btn" id="browseReposBtn" style="margin-top:10px; width:100%;">Browse my repos&hellip;</button>
+        <button class="btn" id="browseReposBtn" style="margin-top:10px; width:100%;">Browse my GitHub repos&hellip;</button>
         <div class="hint" id="browseRepoErr" style="color:var(--crit); display:none; margin-top:8px;"></div>
         <div id="browseRepoPanel" style="display:none; margin-top:10px;">
           <input type="text" id="browseRepoSearch" placeholder="Filter by name" class="mono"
@@ -690,6 +696,13 @@ footer.note .mono{color:var(--text-3);}
 </div>
 
 <script>
+// Feature switches. Set azure to false to turn Azure DevOps support off:
+// Azure repos and token boxes disappear from the app, nothing saved is deleted,
+// and setting it back to true restores them. To remove the code entirely, see
+// "Removing Azure DevOps support" in the README. Everything Azure-specific is
+// tagged AZURE-SUPPORT so it can be found with a search.
+const FEATURES = { azure: true };
+
 const PALETTE = ["#6C8EF5","#F5A25D","#5FC7A3","#E76F8B","#9B8AE6","#4FB6C9","#E8C468","#D97BD4","#7FA9E0","#C97D60"];
 
 // =====================================================================
@@ -701,7 +714,10 @@ const Store = (function(){
   const K_TOKEN = 'ghp_token';
   const K_REPOS = 'ghp_repos';        // ["owner/repo", ...]
   const K_LAST  = 'ghp_last_repo';
-  const K_CACHE_PREFIX = 'ghp_cache_'; // + owner/repo -> {data, fetchedAt}
+  // AZURE-SUPPORT
+  const isAz = id => /^azure:/i.test(id || '');
+  const K_AZ_TOKENS = 'ghp_azure_tokens'; // {"https://dev.azure.com/org": token, ...}: one per Azure DevOps host
+  const K_CACHE_PREFIX = 'ghp_cache_'; // + repo id -> {data, fetchedAt}
 
   function safeGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function safeSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
@@ -710,8 +726,25 @@ const Store = (function(){
   return {
     getToken(){ return safeGet(K_TOKEN) || ''; },
     setToken(t){ return safeSet(K_TOKEN, t || ''); },
-    getRepos(){ try{ return JSON.parse(safeGet(K_REPOS) || '[]'); }catch(e){ return []; } },
-    setRepos(list){ return safeSet(K_REPOS, JSON.stringify(list)); },
+    // AZURE-SUPPORT: per-server tokens
+    getAzureToken(base){ try{ return (JSON.parse(safeGet(K_AZ_TOKENS) || '{}'))[base] || ''; }catch(e){ return ''; } },
+    setAzureToken(base, t){
+      let m = {}; try{ m = JSON.parse(safeGet(K_AZ_TOKENS) || '{}'); }catch(e){}
+      if(t) m[base] = t; else delete m[base];
+      return safeSet(K_AZ_TOKENS, JSON.stringify(m));
+    },
+    // With FEATURES.azure off, Azure repos are hidden but stay saved, so turning it back on restores them.
+    getRepos(){
+      try{
+        const all = JSON.parse(safeGet(K_REPOS) || '[]');
+        return FEATURES.azure ? all : all.filter(r => !isAz(r));
+      }catch(e){ return []; }
+    },
+    setRepos(list){
+      let hidden = [];
+      if(!FEATURES.azure){ try{ hidden = JSON.parse(safeGet(K_REPOS) || '[]').filter(isAz); }catch(e){} }
+      return safeSet(K_REPOS, JSON.stringify(list.concat(hidden.filter(r => !list.includes(r)))));
+    },
     getLastRepo(){ return safeGet(K_LAST) || ''; },
     setLastRepo(r){ return safeSet(K_LAST, r); },
     getCache(repo){
@@ -885,6 +918,200 @@ const GitHub = (function(){
 
   return { getRepoInfo, getAllBranches, getAllCommits, getUserRepos, getPulls, getCommitFiles };
 })();
+
+// =====================================================================
+// AZURE-SUPPORT (start) — see "Removing Azure DevOps support" in the README
+// AZURE DEVOPS — the same shape as the GitHub module above, for Azure
+// DevOps Services (https://dev.azure.com/{org}) and Azure DevOps Server
+// (on-premises, https://{server}/{collection}). A tracked repo is stored as
+//   azure:<base url>/<project>/<repo>      (project and repo URL-encoded)
+// Auth is a personal access token (Code: Read) sent as a Basic header,
+// straight from this page to that host. Nothing else is contacted.
+// The graph pipeline below only needs branches and commits with parents, so
+// it is shared unchanged.
+// =====================================================================
+const Azure = (function(){
+  const API_VERSION = '6.0'; // Azure DevOps Services and Server 2020 or newer
+
+  function makeId(baseUrl, project, repo){
+    return 'azure:' + baseUrl.replace(/\/+$/, '') + '/' + encodeURIComponent(project) + '/' + encodeURIComponent(repo);
+  }
+  // "azure:https://dev.azure.com/org/My%20Project/my-repo" -> {baseUrl, project, repo}
+  function parseId(id){
+    if(!/^azure:/i.test(id)) return null;
+    const parts = id.replace(/^azure:/i, '').split('/');
+    if(parts.length < 5) return null; // scheme, '', host, project, repo at the least
+    const repo = decodeURIComponent(parts.pop()), project = decodeURIComponent(parts.pop());
+    return { baseUrl: parts.join('/'), project, repo };
+  }
+  // Turns a repo's web address into an id. Accepts the address bar URL:
+  //   https://dev.azure.com/{org}/{project}/_git/{repo}
+  //   https://{org}.visualstudio.com/{project}/_git/{repo}
+  //   https://{server}/{collection}/{project}/_git/{repo}   (on-premises)
+  // and clone URLs of the same shape. Returns null if it doesn't look like one.
+  function idFromWebUrl(input){
+    let u; try{ u = new URL(input.trim()); }catch(e){ return null; }
+    if(u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    const parts = u.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+    const gi = parts.indexOf('_git');
+    if(gi < 1 || !parts[gi+1]) return null;
+    let project = parts[gi-1], baseParts = parts.slice(0, gi-1);
+    // https://dev.azure.com/{org}/_git/{repo}: the project is named like the repo
+    if(gi === 1 && /(^|\.)dev\.azure\.com$/i.test(u.hostname)){ project = parts[gi+1]; baseParts = parts.slice(0, gi); }
+    if(!baseParts.length && /(^|\.)dev\.azure\.com$/i.test(u.hostname)) return null; // no organisation
+    const base = u.origin + (baseParts.length ? '/' + baseParts.map(encodeURIComponent).join('/') : '');
+    return makeId(base, project, parts[gi+1]);
+  }
+  function label(id){
+    const r = parseId(id); if(!r) return id;
+    return r.baseUrl.replace(/^https?:\/\//i, '').replace(/^dev\.azure\.com\//i, '') + '/' + r.project + '/' + r.repo;
+  }
+  const repoApi = r => `${r.baseUrl}/${encodeURIComponent(r.project)}/_apis/git/repositories/${encodeURIComponent(r.repo)}`;
+  const withVersion = url => url + (url.includes('?') ? '&' : '?') + 'api-version=' + API_VERSION;
+  const stripHeads = n => (n || '').replace(/^refs\/heads\//, '');
+
+  async function req(url, token){
+    let res;
+    try{
+      res = await fetch(withVersion(url), { headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Basic ' + btoa(':' + token),
+      }});
+    } catch(e){
+      const err = new Error('Couldn\'t reach Azure DevOps from this page. The browser may have blocked the request (CORS) or the network is down. For an on-premises server, your admin may need to allow this page\'s origin.');
+      err.status = 0; throw err;
+    }
+    // A rejected token often comes back as 203 with an HTML sign-in page, not a 401.
+    const isJson = (res.headers.get('content-type') || '').toLowerCase().includes('json');
+    if(res.status === 401 || res.status === 203 || (res.ok && !isJson)){
+      const err = new Error('Azure DevOps did not accept the token — check it is correct, not expired, and has "Code: Read".');
+      err.status = 401; throw err;
+    }
+    if(!res.ok){
+      let msg = res.status + ' ' + res.statusText;
+      if(res.status === 403) msg = '403 from Azure DevOps — the token may not have access to this repo or "Code: Read".';
+      else if(res.status === 404) msg = 'Repo not found, or the token can\'t see it (404). Check the organisation, project and repo name.';
+      const err = new Error(msg); err.status = res.status; throw err;
+    }
+    return res;
+  }
+
+  async function getRepoInfo(r, token){
+    const json = await (await req(repoApi(r), token)).json();
+    return { defaultBranch: stripHeads(json.defaultBranch) || 'main', fullName: label(makeId(r.baseUrl, r.project, r.repo)) };
+  }
+
+  async function getAllBranches(r, token){
+    const json = await (await req(`${repoApi(r)}/refs?filter=heads/&$top=1000`, token)).json();
+    return (json.value || []).map(b => ({ name: stripHeads(b.name), sha: b.objectId }));
+  }
+
+  // Commit history reachable from each branch tip, merged and deduped by
+  // sha. Each commit already carries its parent ids, so only paging is needed.
+  async function getAllCommits(r, branchTips, token, onProgress){
+    const seen = new Map();
+    const PAGE = 100;
+    let idx = 0;
+    for(const tip of branchTips){
+      idx++;
+      if(onProgress) onProgress(`Fetching commit history (${idx}/${branchTips.length} branches)…`);
+      let skip = 0, guard = 0, hitKnown = false;
+      while(guard < 20 && !hitKnown){
+        guard++;
+        const url = `${repoApi(r)}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(tip)}`
+          + `&searchCriteria.itemVersion.versionType=commit&searchCriteria.$top=${PAGE}&searchCriteria.$skip=${skip}`;
+        const json = await (await req(url, token)).json();
+        const list = json.value || [];
+        for(const c of list){
+          if(seen.has(c.commitId)){ hitKnown = true; continue; }
+          const msg = c.comment || '';
+          const nl = msg.indexOf('\n');
+          seen.set(c.commitId, {
+            sha: c.commitId,
+            parents: c.parents || [],
+            author: (c.author && c.author.name) || 'unknown',
+            date: (c.committer && c.committer.date) || (c.author && c.author.date),
+            subject: nl === -1 ? msg : msg.slice(0, nl),
+            body: nl === -1 ? '' : msg.slice(nl + 1).replace(/^\n+/, '').trim(),
+          });
+        }
+        if(list.length < PAGE) break;
+        skip += PAGE;
+      }
+    }
+    return [...seen.values()];
+  }
+
+  // On-request only (see Person details).
+  async function getPulls(r, token){
+    const out = [];
+    for(let page = 0; page < 5; page++){
+      const url = `${repoApi(r)}/pullrequests?searchCriteria.status=all&$top=100&$skip=${page*100}`;
+      const json = await (await req(url, token)).json();
+      const list = json.value || [];
+      for(const p of list) out.push({
+        number: p.pullRequestId, title: p.title, branch: stripHeads(p.sourceRefName),
+        url: `${r.baseUrl}/${encodeURIComponent(r.project)}/_git/${encodeURIComponent(r.repo)}/pullrequest/${p.pullRequestId}`,
+        state: p.status === 'completed' ? 'merged' : (p.status === 'active' ? 'open' : p.status),
+        user: p.createdBy && p.createdBy.displayName,
+      });
+      if(list.length < 100) break;
+    }
+    return out;
+  }
+  // Azure lists which files a commit changed but not line counts, so
+  // additions/deletions are null and the UI shows a dash for them.
+  async function getCommitFiles(r, sha, token){
+    const json = await (await req(`${repoApi(r)}/commits/${sha}/changes`, token)).json();
+    return (json.changes || []).filter(c => c.item && !c.item.isFolder).map(c => ({
+      filename: (c.item.path || '').replace(/^\//, ''), additions: null, deletions: null, status: c.changeType,
+    }));
+  }
+
+  return { makeId, parseId, idFromWebUrl, label, getRepoInfo, getAllBranches, getAllCommits, getPulls, getCommitFiles };
+})();
+
+// =====================================================================
+// PROVIDERS — one small facade so the app never cares which service a
+// tracked repo lives on. GitHub repos are stored as "owner/repo" (as they
+// always were); Azure DevOps repos as "azure:...".
+// =====================================================================
+const Providers = (function(){
+  const isAzure = id => /^azure:/i.test(id || '');
+  function client(id){
+    if(isAzure(id)){
+      const ref = Azure.parseId(id);
+      const tk = () => ref ? Store.getAzureToken(ref.baseUrl) : '';
+      return {
+        provider: 'azure', service: 'Azure DevOps', id, ref, host: ref ? ref.baseUrl : '',
+        label: Azure.label(id), repoName: ref ? ref.repo : id,
+        tokenLabel: 'an Azure DevOps personal access token (Code: Read)',
+        pullsHint: 'Azure DevOps refused the request. The token needs "Code: Read", which covers pull requests.',
+        token: tk,
+        getRepoInfo: () => Azure.getRepoInfo(ref, tk()),
+        getAllBranches: () => Azure.getAllBranches(ref, tk()),
+        getAllCommits: (tips, onProgress) => Azure.getAllCommits(ref, tips, tk(), onProgress),
+        getPulls: () => Azure.getPulls(ref, tk()),
+        getCommitFiles: sha => Azure.getCommitFiles(ref, sha, tk()),
+      };
+    }
+    const [owner, repo] = (id || '').split('/');
+    const tk = () => Store.getToken();
+    return {
+      provider: 'github', service: 'GitHub', id, host: 'github', label: id, repoName: repo,
+      tokenLabel: 'a GitHub personal access token',
+      pullsHint: 'Pull requests need the token\'s "Pull requests: Read-only" permission. Branches still work without it.',
+      token: tk,
+      getRepoInfo: () => GitHub.getRepoInfo(owner, repo, tk()),
+      getAllBranches: () => GitHub.getAllBranches(owner, repo, tk()),
+      getAllCommits: (tips, onProgress) => GitHub.getAllCommits(owner, repo, tips, tk(), onProgress),
+      getPulls: () => GitHub.getPulls(owner, repo, tk()),
+      getCommitFiles: sha => GitHub.getCommitFiles(owner, repo, sha, tk()),
+    };
+  }
+  return { isAzure, client };
+})();
+// AZURE-SUPPORT (end)
 
 // =====================================================================
 // GRAPH PIPELINE — ported from build_graph.py (this session's earlier,
@@ -1326,7 +1553,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   const settingsBackdrop = document.getElementById('settingsBackdrop');
   function openSettings(){
     document.getElementById('tokenInput').value = Store.getToken();
+    document.getElementById('addRepoInput').placeholder = FEATURES.azure ? 'owner/repo, or an Azure DevOps repo URL' : 'owner/repo';
     renderRepoListSettings();
+    renderAzureTokens();
     document.getElementById('browseRepoPanel').style.display = 'none';
     document.getElementById('browseRepoSearch').value = '';
     document.getElementById('browseRepoErr').style.display = 'none';
@@ -1354,7 +1583,10 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     repos.forEach(r=>{
       const row = document.createElement('div');
       row.className = 'settingsRepo';
-      row.innerHTML = `<span>${r}</span>`;
+      const nameEl = document.createElement('span');
+      nameEl.textContent = Providers.client(r).label;
+      nameEl.title = Providers.client(r).service;
+      row.appendChild(nameEl);
       const rm = document.createElement('button');
       rm.className = 'btn danger';
       rm.textContent = 'Remove';
@@ -1362,6 +1594,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         Store.setRepos(Store.getRepos().filter(x=>x!==r));
         Store.clearCache(r);
         renderRepoListSettings();
+        renderAzureTokens();
         populateRepoSelect();
       });
       row.appendChild(rm);
@@ -1374,16 +1607,33 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     const errEl = document.getElementById('addRepoErr');
     const val = input.value.trim();
     errEl.style.display = 'none';
-    if(!/^[\w.-]+\/[\w.-]+$/.test(val)){
-      errEl.textContent = 'Enter it as owner/repo, e.g. DhamaGaurav/PaisaFetch';
+    let id = null;
+    if(/^https?:\/\//i.test(val)){
+      // AZURE-SUPPORT
+      if(!FEATURES.azure){
+        errEl.textContent = 'Azure DevOps support is turned off in this copy. Enter a GitHub repo as owner/repo.';
+        errEl.style.display = 'block';
+        return;
+      }
+      id = Azure.idFromWebUrl(val);
+      if(!id){
+        errEl.textContent = 'Paste the repo\'s web address, e.g. https://dev.azure.com/org/project/_git/repo';
+        errEl.style.display = 'block';
+        return;
+      }
+    } else if(/^[\w.-]+\/[\w.-]+$/.test(val)){
+      id = val;
+    } else {
+      errEl.textContent = 'Enter a GitHub repo as owner/repo (e.g. DhamaGaurav/PaisaFetch) or paste an Azure DevOps repo URL.';
       errEl.style.display = 'block';
       return;
     }
     const repos = Store.getRepos();
-    if(!repos.includes(val)) repos.push(val);
+    if(!repos.includes(id)) repos.push(id);
     Store.setRepos(repos);
     input.value = '';
     renderRepoListSettings();
+    renderAzureTokens();
     populateRepoSelect();
   });
 
@@ -1394,6 +1644,31 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // repos" (or closing Settings via the × / backdrop / Escape instead of
   // that button) never actually persisted it, and it looked like the token
   // had to be re-entered on every visit even though it had been typed in.
+  // One token box per Azure DevOps server among the tracked repos (cloud and
+  // on-premises servers each need their own token).
+  // AZURE-SUPPORT
+  function renderAzureTokens(){
+    document.getElementById('azureTokenField').style.display = FEATURES.azure ? '' : 'none';
+    const list = document.getElementById('azureTokenList');
+    const hint = document.getElementById('azureTokenHint');
+    const hosts = [...new Set(Store.getRepos().filter(Providers.isAzure).map(r=>{ const p = Azure.parseId(r); return p && p.baseUrl; }).filter(Boolean))];
+    list.innerHTML = '';
+    hint.style.display = hosts.length ? 'none' : '';
+    hosts.forEach(base=>{
+      const wrap = document.createElement('div');
+      wrap.style.marginBottom = '8px';
+      const lbl = document.createElement('div');
+      lbl.className = 'hint mono'; lbl.style.margin = '0 0 4px'; lbl.textContent = base.replace(/^https?:\/\//, '');
+      const inp = document.createElement('input');
+      inp.type = 'password'; inp.autocomplete = 'off'; inp.placeholder = 'Personal access token (Code: Read)';
+      inp.setAttribute('aria-label', 'Access token for ' + base);
+      inp.value = Store.getAzureToken(base);
+      inp.addEventListener('input', ()=> Store.setAzureToken(base, inp.value.trim()));
+      wrap.appendChild(lbl); wrap.appendChild(inp);
+      list.appendChild(wrap);
+    });
+  }
+
   const tokenInputEl = document.getElementById('tokenInput');
   tokenInputEl.addEventListener('input', ()=>{ Store.setToken(tokenInputEl.value.trim()); });
 
@@ -1489,7 +1764,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     }
     repos.forEach(r=>{
       const opt = document.createElement('option');
-      opt.value = r; opt.textContent = r;
+      opt.value = r; opt.textContent = Providers.client(r).label;
       repoSelect.appendChild(opt);
     });
     const want = repos.includes(current) ? current : (repos.includes(Store.getLastRepo()) ? Store.getLastRepo() : repos[0]);
@@ -1519,15 +1794,15 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
   async function loadRepo(fullName, opts){
     opts = opts || {};
-    const token = Store.getToken();
-    if(!token){ setCenterState(`<div class="big">No GitHub token yet</div><div>Open Settings to add a personal access token.</div>`); return; }
-    const [owner, repo] = fullName.split('/');
+    const cl = Providers.client(fullName);
+    if(!cl.token()){ setCenterState(`<div class="big">No ${cl.service} token yet</div><div>Open Settings to add ${cl.tokenLabel}.</div>`); return; }
+    const meta = {id: fullName, provider: cl.provider, service: cl.service, repo: cl.repoName, fullName: cl.label};
     const cached = Store.getCache(fullName);
     if(cached){
       now = new Date();
-      applyData(cached.data, {owner, repo, fullName}, cached.fetchedAt);
+      applyData(cached.data, meta, cached.fetchedAt);
     } else if(!opts.background){
-      setCenterState(`<div class="spinner"></div><div class="big">Loading ${fullName}&hellip;</div><div id="loadingDetail"></div>`);
+      setCenterState(`<div class="spinner"></div><div class="big">Loading ${escapeHtml(cl.label)}&hellip;</div><div id="loadingDetail"></div>`);
     }
     // Some visible sign that a fetch is actually happening — otherwise a
     // click on Refresh with cached data already on screen looks like it did
@@ -1538,15 +1813,15 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     refreshBtn.classList.add('spin');
     document.body.classList.add('working');
     refreshBtn.disabled = true;
-    refreshBtn.title = 'Fetching from GitHub…';
+    refreshBtn.title = `Fetching from ${cl.service}…`;
     if(cached){
       const footerNoteEl = document.getElementById('footerNote');
-      footerNoteEl.innerHTML = `Live from GitHub &middot; <span class="mono">${fullName}</span> &middot; <span class="refreshedNote">refreshing&hellip;</span>`;
+      footerNoteEl.innerHTML = `Live from ${cl.service} &middot; <span class="mono">${escapeHtml(cl.label)}</span> &middot; <span class="refreshedNote">refreshing&hellip;</span>`;
     }
     try{
-      const info = await GitHub.getRepoInfo(owner, repo, token);
-      const branches = await GitHub.getAllBranches(owner, repo, token);
-      const commits = await GitHub.getAllCommits(owner, repo, branches.map(b=>b.sha), token, (msg)=>{
+      const info = await cl.getRepoInfo();
+      const branches = await cl.getAllBranches();
+      const commits = await cl.getAllCommits(branches.map(b=>b.sha), (msg)=>{
         const d = document.getElementById('loadingDetail');
         if(d) d.textContent = msg;
       });
@@ -1554,29 +1829,30 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       const built = buildGraphData(branches, commits, info.defaultBranch, nowISO);
       Store.setCache(fullName, built);
       now = new Date();
-      applyData(built, {owner, repo, fullName}, nowISO);
+      applyData(built, meta, nowISO);
     } catch(err){
       if(!cached){
-        setCenterState(`<div class="big">Couldn't load ${fullName}</div><div class="errBox">${(err && err.message) || err}</div>`);
+        setCenterState(`<div class="big">Couldn't load ${escapeHtml(cl.label)}</div><div class="errBox">${escapeHtml((err && err.message) || String(err))}</div>`);
       } else {
         console.warn('background refresh failed', err);
         // restore the last-known-good timestamp instead of leaving the
         // footer stuck on "refreshing…" forever
         document.getElementById('footerNote').innerHTML =
-          `Live from GitHub &middot; <span class="mono">${fullName}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(cached.fetchedAt)} &middot; refresh failed, showing cached data</span>`;
+          `Live from ${cl.service} &middot; <span class="mono">${escapeHtml(cl.label)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(cached.fetchedAt)} &middot; refresh failed, showing cached data</span>`;
       }
     } finally {
       refreshBtn.classList.remove('spin');
       document.body.classList.remove('working');
       refreshBtn.disabled = false;
-      refreshBtn.title = 'Refresh from GitHub';
+      refreshBtn.title = 'Refresh';
     }
   }
 
   function maybeAutoLoad(){
     const repos = Store.getRepos();
-    if(!repos.length || !Store.getToken()) return;
+    if(!repos.length) return;
     populateRepoSelect();
+    if(!Providers.client(repoSelect.value).token()) return;
     loadRepo(repoSelect.value, {background:false});
   }
 
@@ -1603,7 +1879,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     const llDefaultTag = document.getElementById('llDefaultTag');
     if(llDefaultTag) llDefaultTag.textContent = DATA.default_branch || 'main';
     document.getElementById('footerNote').innerHTML =
-      `Live from GitHub &middot; <span class="mono">${meta.fullName}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`;
+      `Live from ${meta.service || 'GitHub'} &middot; <span class="mono">${escapeHtml(meta.fullName)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`;
 
     renderStats();
     renderFilters();
@@ -1742,7 +2018,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // =====================================================================
   // PERSON DETAILS — full-screen drill-down for whoever is selected in
   // "Committed by". Everything on first open comes from the data already
-  // loaded (no GitHub calls). Pull requests and files touched cost extra
+  // loaded (no API calls). Pull requests and files touched cost extra
   // API calls, so they only load when asked, and are cached in memory.
   // =====================================================================
   const pv = document.getElementById('personView');
@@ -1831,14 +2107,15 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   function areaRows(shas){
     const areas = {};
     shas.forEach(sha=> (pvFiles[sha] || []).forEach(f=>{
-      const a = (areas[folderOf(f.filename)] ||= {area:folderOf(f.filename), files:new Set(), add:0, del:0});
+      const a = (areas[folderOf(f.filename)] ||= {area:folderOf(f.filename), files:new Set(), add:0, del:0, counts:true});
       a.files.add(f.filename); a.add += f.additions||0; a.del += f.deletions||0;
+      if(f.additions == null) a.counts = false; // some providers (Azure DevOps) don't report line counts
     }));
     return Object.values(areas).sort((x,y)=> y.files.size - x.files.size || (y.add+y.del) - (x.add+x.del));
   }
   function areaTable(rows){
     return `<table class="ptable"><thead><tr><th>Area</th><th class="num">Files</th><th class="num">Added</th><th class="num">Removed</th></tr></thead><tbody>${
-      rows.map(a=>`<tr><td class="mono">${escapeHtml(a.area)}</td><td class="num">${a.files.size}</td><td class="num add">+${a.add}</td><td class="num del">&minus;${a.del}</td></tr>`).join('')
+      rows.map(a=>`<tr><td class="mono">${escapeHtml(a.area)}</td><td class="num">${a.files.size}</td><td class="num add">${a.counts ? '+' + a.add : '&ndash;'}</td><td class="num del">${a.counts ? '&minus;' + a.del : '&ndash;'}</td></tr>`).join('')
     }</tbody></table>`;
   }
   const filesTargets = r=> r.mine.filter(n=> !n.is_merge).slice(0, FILES_PER_BRANCH_CAP);
@@ -1861,8 +2138,8 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       html += `<div class="pbrBody">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
           <button class="pbtn" data-act="branchFiles" data-branch="${escapeHtml(r.name)}" ${pvBusy ? 'disabled' : ''}>${loaded.length ? 'Refresh' : 'Load'} files this person changed</button>
-          <span class="pnoteLine" style="margin:0;">${filesTargets(r).length} commit${filesTargets(r).length===1?'':'s'}, one GitHub call each${r.mine.filter(n=>!n.is_merge).length > FILES_PER_BRANCH_CAP ? ' (newest ' + FILES_PER_BRANCH_CAP + ' only)' : ''}</span>
-          ${pr ? `<a class="pbtn" style="display:inline-flex;align-items:center;text-decoration:none;" href="${escapeHtml(pr.url)}" target="_blank" rel="noopener">Open PR on GitHub</a>` : ''}
+          <span class="pnoteLine" style="margin:0;">${filesTargets(r).length} commit${filesTargets(r).length===1?'':'s'}, one call each${r.mine.filter(n=>!n.is_merge).length > FILES_PER_BRANCH_CAP ? ' (newest ' + FILES_PER_BRANCH_CAP + ' only)' : ''}</span>
+          ${pr ? `<a class="pbtn" style="display:inline-flex;align-items:center;text-decoration:none;" href="${escapeHtml(pr.url)}" target="_blank" rel="noopener">Open pull request</a>` : ''}
         </div>
         ${loaded.length ? `<div class="pfiles">${areaTable(areaRows(loaded.map(n=>n.sha)))}</div>` : ''}
         <h3 style="font-size:12px; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-2);">All ${r.all.length} commits on this branch</h3>
@@ -1913,7 +2190,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
           ${p.collaborators.length ? `<table class="ptable"><thead><tr><th>Person</th><th class="num">Shared branches</th><th class="num">Their commits</th></tr></thead><tbody>${
             p.collaborators.slice(0, 15).map(c=>`<tr><td>${escapeHtml(c.name)}</td><td class="num">${c.shared}</td><td class="num">${c.theirCommits}</td></tr>`).join('')}</tbody></table>${p.collaborators.length > 15 ? `<div class="pnoteLine">+ ${p.collaborators.length - 15} more</div>` : ''}` : '<div class="pnoteLine">Worked alone on every branch.</div>'}
         </div>
-        <div class="pcard"><h3>Areas touched</h3><div class="hint">Folders this person changed. Loads on request: one GitHub call per commit.</div>
+        <div class="pcard"><h3>Areas touched</h3><div class="hint">Folders this person changed. Loads on request: one call per commit.</div>
           <button class="pbtn" data-act="allFiles" ${pvBusy || !totalTargets ? 'disabled' : ''}>${totalTargets ? `Load files for all branches (${totalTargets} calls)` : (allLoadedShas.length ? 'All loaded' : 'Nothing to load')}</button>
           ${allLoadedShas.length ? `<div class="pfiles">${areaTable(areaRows(allLoadedShas))}</div>` : ''}
         </div>
@@ -1933,18 +2210,19 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   function closePerson(){ pv.classList.remove('show'); pv.innerHTML = ''; }
 
   async function loadPulls(){
-    const token = Store.getToken();
-    if(!token || !currentMeta) return;
+    if(!currentMeta) return;
+    const cl = Providers.client(currentMeta.id);
+    if(!cl.token()) return;
     pvBusy = 'pulls'; pvPullsErr = ''; pvNote = 'Loading pull requests…'; renderPerson();
     try{
-      const list = await GitHub.getPulls(currentMeta.owner, currentMeta.repo, token);
+      const list = await cl.getPulls();
       const byBranch = {};
       list.forEach(pr=>{ if(!byBranch[pr.branch] || pr.number > byBranch[pr.branch].number) byBranch[pr.branch] = pr; });
       pvPulls = {byBranch, count: list.length};
       pvNote = `Loaded ${list.length} pull request${list.length===1?'':'s'}.`;
     } catch(err){
       pvPullsErr = err.status === 403 || err.status === 404
-        ? 'Pull requests need the token\'s "Pull requests: Read-only" permission. Branches still work without it.'
+        ? cl.pullsHint
         : (err.message || String(err));
       pvNote = '';
     }
@@ -1952,15 +2230,16 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   }
 
   async function loadFiles(shas){
-    const token = Store.getToken();
-    if(!token || !currentMeta) return;
+    if(!currentMeta) return;
+    const cl = Providers.client(currentMeta.id);
+    if(!cl.token()) return;
     const todo = shas.filter(s=> !pvFiles[s]);
     pvBusy = 'files';
     let done = 0;
     try{
       for(const sha of todo){
         pvNote = `Loading files… ${done}/${todo.length}`; renderPerson();
-        pvFiles[sha] = await GitHub.getCommitFiles(currentMeta.owner, currentMeta.repo, sha, token);
+        pvFiles[sha] = await cl.getCommitFiles(sha);
         done++;
       }
       pvNote = `Loaded files for ${done} commit${done===1?'':'s'}.`;
@@ -2415,14 +2694,14 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
   // ---- boot ----
   populateRepoSelect();
-  if(!Store.getToken() || !Store.getRepos().length){
-    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add a GitHub token and your first repo.</div>`);
+  if(!Store.getRepos().some(r=> Providers.client(r).token())){
+    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add an access token and your first repo.</div>`);
   } else {
     maybeAutoLoad();
   }
 
   // exposed for local testing only — not part of the app's own behavior
-  window.__gitPlatformDebug = { buildGraphData, GitHub, Store, applyData, loadRepo };
+  window.__gitPlatformDebug = { buildGraphData, GitHub, Azure, Providers, Store, applyData, loadRepo };
 })();
 </script>
 
