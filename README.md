@@ -57,31 +57,49 @@ read -s PAT; curl -s -o /dev/null -w "%{http_code}\n" -u ":$PAT" "https://dev.az
 
 Some organisations block the **Code** scope on personal access tokens (the token's Scopes list shows things like Packaging but not Code, so the app connects yet every repo read fails with 401). If an admin can't enable it, you can sign in with your **Microsoft Entra ID** identity instead and paste the resulting access token into the same box. The app sends a token that looks like an Entra token (a JWT) as a Bearer credential automatically, and a personal access token as before.
 
-Get a token with PowerShell (no admin rights needed; it installs into your user profile):
+Get a token with PowerShell (no admin rights needed; it installs into your user profile).
+
+**1. Install the module (once):**
 
 ```powershell
 Install-Module Az.Accounts -Scope CurrentUser -Force -AllowClobber
-Connect-AzAccount -UseDeviceAuthentication    # prints a web address and a code; see below
+```
+
+**2. Sign in. Use whichever works on your machine:**
+
+*Option A: sign in with a code (opens no window).*
+
+```powershell
+Connect-AzAccount -UseDeviceAuthentication
+```
+
+PowerShell prints a line like "To sign in, use a web browser to open https://microsoft.com/devicelogin and enter the code ...". Open that address in your normal browser, type the code, and sign in with your work account. The PowerShell prompt then carries on by itself.
+
+*Option B: the usual sign-in window.*
+
+```powershell
+Connect-AzAccount
+```
+
+Newer Az versions open a Windows account picker; older ones open a browser tab. Sign in with your work account. If the window never appears on your machine, use Option A instead. To get an ordinary browser tab rather than the picker, turn the picker off once and then run `Connect-AzAccount` again:
+
+```powershell
+Update-AzConfig -EnableLoginByWam $false
+```
+
+If your account belongs to several directories, add `-Tenant YOUR-TENANT` to either command (use the directory that owns your Azure DevOps organisation).
+
+**3. Get the token and copy it:**
+
+```powershell
 $t = Get-AzAccessToken -ResourceUrl "499b84ac-1321-427f-aa17-267ca6975798"    # Azure DevOps' resource id
 $ADO = if ($t.Token -is [System.Security.SecureString]) { [System.Net.NetworkCredential]::new('', $t.Token).Password } else { $t.Token }
 Set-Clipboard -Value $ADO    # now paste it into Settings, Azure DevOps
 ```
 
-**Signing in without the account picker window.** `-UseDeviceAuthentication` opens no window at all. PowerShell prints a line like "To sign in, use a web browser to open https://microsoft.com/devicelogin and enter the code ...". Open that address in your normal browser, type the code, sign in with your work account, and the PowerShell prompt carries on by itself. Use this if the window that plain `Connect-AzAccount` opens never appears (newer versions open a Windows account picker by default).
-
-If you would rather get an ordinary browser tab than a code, turn the picker off once and use plain `Connect-AzAccount` after it:
+Prefer the Azure CLI? Sign in either way (`az login` opens a browser tab, `az login --use-device-code` uses a code), then print a token:
 
 ```powershell
-Update-AzConfig -EnableLoginByWam $false
-Connect-AzAccount
-```
-
-If your account belongs to several directories, add `-Tenant YOUR-TENANT` to `Connect-AzAccount` (use the directory that owns your Azure DevOps organisation).
-
-Prefer the Azure CLI? Sign in the same way and print a token:
-
-```powershell
-az login --use-device-code
 az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv
 ```
 
@@ -91,7 +109,7 @@ Check it before pasting (replace `YOUR-ORG`); `200` means it works:
 curl.exe -s -o NUL -w "%{http_code}\n" -H "Authorization: Bearer $ADO" "https://dev.azure.com/YOUR-ORG/_apis/git/repositories?api-version=6.0"
 ```
 
-**These tokens expire after about an hour.** When the map stops refreshing with a token error, run the `Get-AzAccessToken` and `Set-Clipboard` lines again and paste the new one. For a long-lived credential, ask an admin to allow the Code scope on personal access tokens instead.
+**These tokens expire after about an hour.** When the map stops refreshing with a token error, run step 3 again (the `Get-AzAccessToken` and `Set-Clipboard` lines) and paste the new one; if PowerShell has signed you out, repeat step 2 first. For a long-lived credential, ask an admin to allow the Code scope on personal access tokens instead.
 
 ### Blocked by your browser (CORS)? Use the local helper
 
