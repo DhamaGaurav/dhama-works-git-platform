@@ -722,7 +722,7 @@ footer.note .mono{color:var(--text-3);}
         <div class="settingsField">
           <label>Access tokens</label>
           <div id="azureTokenList"></div>
-          <div class="hint" id="azureTokenHint">A box appears here for each server you add. Use a personal access token with Code: Read. Stored only in this browser; sent only to that server.</div>
+          <div class="hint" id="azureTokenHint">A box appears here for each server you add. Use a personal access token with Code: Read, or, if your organisation blocks the Code scope on tokens, a Microsoft Entra ID access token (see "No Code scope?" in the README). Stored only in this browser; sent only to that server.</div>
           <div class="hint" id="azureHelperNote"></div>
         </div>
       </div>
@@ -968,7 +968,8 @@ const GitHub = (function(){
 // DevOps Services (https://dev.azure.com/{org}) and Azure DevOps Server
 // (on-premises, https://{server}/{collection}). A tracked repo is stored as
 //   azure:<base url>/<project>/<repo>      (project and repo URL-encoded)
-// Auth is a personal access token (Code: Read) sent as a Basic header,
+// Auth is a personal access token (Code: Read) sent as a Basic header, or a
+// Microsoft Entra ID access token (a JWT) sent as Bearer,
 // straight from this page to that host. Nothing else is contacted.
 // The graph pipeline below only needs branches and commits with parents, so
 // it is shared unchanged.
@@ -1018,13 +1019,25 @@ const Azure = (function(){
   const withVersion = url => url + (url.includes('?') ? '&' : '?') + 'api-version=' + API_VERSION;
   const stripHeads = n => (n || '').replace(/^refs\/heads\//, '');
 
+  // Azure DevOps accepts two kinds of token, authenticated two different ways:
+  //  - a personal access token (PAT), sent as HTTP Basic with an empty user name;
+  //  - a Microsoft Entra ID (Azure AD) OAuth access token, sent as Bearer.
+  // Entra tokens are JWTs: three dot-separated base64url parts beginning "ey"
+  // (the encoded header '{"alg"...'); PATs never are. Detecting that lets one token
+  // box take either, which matters where an organisation blocks the Code scope on
+  // PATs but still allows Entra sign-in. Get one with:
+  //   az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798
+  // (or PowerShell; see the README).
+  const isJwt = token => /^ey[\w-]+\.[\w-]+\.[\w-]+$/.test(token || '');
+  const authHeader = token => isJwt(token) ? 'Bearer ' + token : 'Basic ' + btoa(':' + token);
+
   async function req(url, token, opts){
     let res;
     try{
       const target = (opts && opts.noVersion) ? url : withVersion(url);
       res = await fetch(HELPER ? viaHelper(target) : target, { headers: {
         'Accept': 'application/json',
-        'Authorization': 'Basic ' + btoa(':' + token),
+        'Authorization': authHeader(token),
       }});
     } catch(e){
       const err = new Error(HELPER
@@ -1803,7 +1816,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       const lbl = document.createElement('div');
       lbl.className = 'hint mono'; lbl.style.margin = '0 0 4px'; lbl.textContent = base.replace(/^https?:\/\//, '');
       const inp = document.createElement('input');
-      inp.type = 'password'; inp.autocomplete = 'off'; inp.placeholder = 'Personal access token (Code: Read)';
+      inp.type = 'password'; inp.autocomplete = 'off'; inp.placeholder = 'PAT (Code: Read) or Entra ID access token';
       inp.setAttribute('aria-label', 'Access token for ' + base);
       inp.dataset.base = base;
       inp.value = Store.getAzureToken(base);

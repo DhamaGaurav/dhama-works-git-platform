@@ -53,6 +53,30 @@ read -s PAT; curl -s -o /dev/null -w "%{http_code}\n" -u ":$PAT" "https://dev.az
 
 `200` means the token is fine. `203` or `401` means the server is rejecting it, so the cause is on the token or server side. For an on-premises server, use `https://YOUR-SERVER/YOUR-COLLECTION/_apis/git/repositories?api-version=6.0`.
 
+### No Code scope on your token? Use a Microsoft Entra ID token
+
+Some organisations block the **Code** scope on personal access tokens (the token's Scopes list shows things like Packaging but not Code, so the app connects yet every repo read fails with 401). If an admin can't enable it, you can sign in with your **Microsoft Entra ID** identity instead and paste the resulting access token into the same box. The app sends a token that looks like an Entra token (a JWT) as a Bearer credential automatically, and a personal access token as before.
+
+Get a token with PowerShell (no admin rights needed; it installs into your user profile):
+
+```powershell
+Install-Module Az.Accounts -Scope CurrentUser -Force -AllowClobber
+Connect-AzAccount    # opens a browser; sign in with your work account
+$t = Get-AzAccessToken -ResourceUrl "499b84ac-1321-427f-aa17-267ca6975798"    # Azure DevOps' resource id
+$ADO = if ($t.Token -is [System.Security.SecureString]) { [System.Net.NetworkCredential]::new('', $t.Token).Password } else { $t.Token }
+Set-Clipboard -Value $ADO    # now paste it into Settings, Azure DevOps
+```
+
+Prefer the Azure CLI? `az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv` prints the same kind of token.
+
+Check it before pasting (replace `YOUR-ORG`); `200` means it works:
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}\n" -H "Authorization: Bearer $ADO" "https://dev.azure.com/YOUR-ORG/_apis/git/repositories?api-version=6.0"
+```
+
+**These tokens expire after about an hour.** When the map stops refreshing with a token error, run the `Get-AzAccessToken` and `Set-Clipboard` lines again and paste the new one. For a long-lived credential, ask an admin to allow the Code scope on personal access tokens instead.
+
 ### Blocked by your browser (CORS)? Use the local helper
 
 Some Azure DevOps servers, often on-premises ones, don't send the headers a browser needs before it lets a page call them. You'll see "the browser may have blocked the request (CORS)". You don't need your admin to change anything: run the optional helper that lives next to `index.html`.
