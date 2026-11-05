@@ -61,13 +61,29 @@ Get a token with PowerShell (no admin rights needed; it installs into your user 
 
 ```powershell
 Install-Module Az.Accounts -Scope CurrentUser -Force -AllowClobber
-Connect-AzAccount    # opens a browser; sign in with your work account
+Connect-AzAccount -UseDeviceAuthentication    # prints a web address and a code; see below
 $t = Get-AzAccessToken -ResourceUrl "499b84ac-1321-427f-aa17-267ca6975798"    # Azure DevOps' resource id
 $ADO = if ($t.Token -is [System.Security.SecureString]) { [System.Net.NetworkCredential]::new('', $t.Token).Password } else { $t.Token }
 Set-Clipboard -Value $ADO    # now paste it into Settings, Azure DevOps
 ```
 
-Prefer the Azure CLI? `az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv` prints the same kind of token.
+**Signing in without the account picker window.** `-UseDeviceAuthentication` opens no window at all. PowerShell prints a line like "To sign in, use a web browser to open https://microsoft.com/devicelogin and enter the code ...". Open that address in your normal browser, type the code, sign in with your work account, and the PowerShell prompt carries on by itself. Use this if the window that plain `Connect-AzAccount` opens never appears (newer versions open a Windows account picker by default).
+
+If you would rather get an ordinary browser tab than a code, turn the picker off once and use plain `Connect-AzAccount` after it:
+
+```powershell
+Update-AzConfig -EnableLoginByWam $false
+Connect-AzAccount
+```
+
+If your account belongs to several directories, add `-Tenant YOUR-TENANT` to `Connect-AzAccount` (use the directory that owns your Azure DevOps organisation).
+
+Prefer the Azure CLI? Sign in the same way and print a token:
+
+```powershell
+az login --use-device-code
+az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv
+```
 
 Check it before pasting (replace `YOUR-ORG`); `200` means it works:
 
