@@ -4,12 +4,12 @@ App guideline under the Dhama Works Design Bible (Core). Chosen direction: **Opt
 
 ## Philosophy
 Calm, clear, alive. Never a cluttered dev terminal, never a corporate dashboard.
-Creature: the spider on its web. Personality: patient, connected, watchful. Used as motif only (the logo mark, a faint web behind the graph, the breathing main-tip node). No mascot on any screen.
+Creature: the spider on its web. Personality: patient, connected, watchful. The web, the Kolam dot field and the breathing main-tip node are motifs. The spider is a permanent mascot in the top bar (see Character), and appears nowhere else.
 
 ## Colour
 Brand layer: ground `#FBF5EC` (dark `#17120F`), ink `#231E1A` (dark `#F3EADF`), accent indigo `#5B4FD6` (dark `#9C93F2`).
 Functional layer:
-- Lanes (data series, fixed order, a new branch takes the next free slot): `#5B4FD6`, `#B3389F`, `#E0532F`, `#1E8FA8`, `#C38611`. Dark: `#9C93F2`, `#DB78C9`, `#F07F5E`, `#5CC0D8`, `#E4B04A`.
+- Lanes (data series, fixed order, a new branch takes the next free slot): `#2F6FD9`, `#B3389F`, `#E0532F`, `#219AB0`, `#C38611`. Dark: `#78A9F4`, `#DB78C9`, `#F08A58`, `#52D9C8`, `#E0C85A`. Rule (Bible): no lane colour equals, or sits close to, a status colour, the accent or another lane. Checked as colour distance (CIE76 ΔE of at least 15) in both modes; lane lines also pass 3:1 on the surface.
 - Status (never a lane): good `#287954`, recent `#1B7489`, warn `#975B0D`, crit `#B83729` (dark: `#5BC18F`, `#5CC0D8`, `#E8A94A`, `#F0806F`).
 - Surfaces: white cards `#FFFFFF` on cream, border `#E8DDCC`, radius 18. Dark values are hand-picked, never auto-brightened.
 
@@ -32,9 +32,9 @@ The app must stay readable with many people, parallel branches and several merge
 - **Cursor web**: a small, sparse web (8 spokes, 3 rings out to about 104px, about 24 anchors; strands about 30% opacity) spun from the pointer to the backdrop's own Kolam dots (the two staggered lattices the CSS paints), with ring threads sagging between neighbouring anchors and dew on each anchored dot. It reaches out toward where the pointer is heading (up to 1.45x ahead) and the strands behind pull in and retract into their dots (down to 0.55x, or dropped when moving fast). A strand keeps its dot until the pointer drags it more than 36px from its ideal spot. It fully collapses about 1.2 s after the pointer rests, draws no frames once collapsed, and is off under Reduce Motion.
 - **Layers**: layer 0 is the Kolam backdrop and the web; layer 1 is the cards (90% opaque, so the web shows only as a faint trace through them); layer 2 is popups, the branch drawer and Person details. While any layer-2 surface is open the web canvas fades to 25%, on top of the dim the popup already puts over the page.
 - **Rope rail**: two twisted strands under the header (a sine pair, never eye-shaped loops). Faint at rest; drawn in the accent while loading.
-- **Rest**: the default branch's tip node breathes (5 s cycle). The spider blinks about every 6 s and tilts its head about every 9 s.
+- **Rest**: the default branch's tip node breathes (5 s cycle, scale up to +30%: it is a small mark, so the Bible allows more than 1 to 2%). The spider's idle moves (a blink about every 6 s, a head tilt about every 9 s) add up to one about every 3.6 s, inside the Bible's "no more often than about every 3 s". Nothing else moves; the web reacts only to the pointer.
 - **Wake**: hovering, scrolling or touching the graph quickens the breathing (3.6 s) for about 1.4 s. Hovering the controls makes the spider wiggle its legs and tilt faster.
-- **Work**: while loading, the rope draws itself and the spider paces back and forth across the refresh button. The refresh icon holds still (no spinner).
+- **Work**: while loading, the rope draws itself, the spider paces back and forth across the refresh button (the mascot acting out Work), and the breathing tip node and the refresh icon hold still (no spinner).
 - **Settle**: one ring leaves the tip node when new data lands, then back to Rest.
 - Reduce Motion turns all of it off.
 
@@ -63,3 +63,4 @@ A "Person details" button appears in the empty gap of the History header (betwee
 - 2026-11-02: Azure DevOps support added without changing the look. Provider is invisible in the UI apart from the repo label, the footer ("Live from Azure DevOps") and dashes where Azure reports no line counts.
 - 2026-11-02: Settings simplified with a GitHub / Azure DevOps toggle (segmented control, counts on each tab). Only the chosen service's fields show: GitHub = token + repos + browse; Azure DevOps = add by address + repos + one token box per server + helper note. The last tab used is remembered; with nothing remembered it opens on the service of the repo on screen. Hidden entirely when FEATURES.azure is off.
 - 2026-11-06: Theme switch added (header button next to Settings: System, then Light, then Dark; saved in `ghp_theme`; applied before first paint so nothing flashes). System, the default, follows the computer. Both palettes already existed; audited every pair the app uses for AA (4.5:1 text, 3:1 lane lines). Fixes: new `--on-accent` token (white on the light accent, near-black on the lighter dark accent, because white on the dark accent failed), and light status colours darkened a touch (good `#287954`, recent `#1B7489`, warn `#975B0D`, crit `#B83729`) plus lane 5 (`#C38611`). Rule: any new colour pair gets checked in both modes.
+- 2026-11-06: Aligned with the revised Design Bible. Lane colours no longer equal the accent (both modes) or the "recent" status (dark), and dark lanes 3 and 5 no longer sit almost on the critical and warning colours (they were 8.8 and 5.7 apart; now every lane is at least 15 from every status colour, the accent and each other). The breathing dot now holds still while loading (it kept breathing before). Fixed the contradiction where this file said both "no mascot on any screen" and "the spider lives in the top bar".

@@ -8,7 +8,7 @@
   --recent:#1B7489; --recent-soft:#DEF1F6;
   --warn:#975B0D; --warn-soft:#FBEBC9;
   --crit:#B83729; --crit-soft:#FBE1DC;
-  --lane0:#5B4FD6; --lane1:#B3389F; --lane2:#E0532F; --lane3:#1E8FA8; --lane4:#C38611; --dot:rgba(60,40,20,0.10);
+  --lane0:#2F6FD9; --lane1:#B3389F; --lane2:#E0532F; --lane3:#219AB0; --lane4:#C38611; --dot:rgba(60,40,20,0.10);
   --shadow: 0 1px 2px rgba(60,40,20,0.06), 0 8px 24px -12px rgba(60,40,20,0.18);
   color-scheme: light;
 }
@@ -21,7 +21,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#9C93F2; --lane1:#DB78C9; --lane2:#F07F5E; --lane3:#5CC0D8; --lane4:#E4B04A; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
     color-scheme: dark;
   }
@@ -34,7 +34,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#9C93F2; --lane1:#DB78C9; --lane2:#F07F5E; --lane3:#5CC0D8; --lane4:#E4B04A; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
   color-scheme: dark;
 }
@@ -71,11 +71,12 @@ body{
    Wake: hovering/scrolling the graph quickens it for ~1.4 s. Work: while
    loading, the Kolam thread under the header draws itself. Settle: one ring
    leaves the tip when new data lands. All of it stops under Reduce Motion. */
-@keyframes breathe{0%,100%{transform:scale(1);} 50%{transform:scale(1.35);}}
+@keyframes breathe{0%,100%{transform:scale(1);} 50%{transform:scale(1.3);}}
 @keyframes ripple{from{transform:scale(1); opacity:.55;} to{transform:scale(4.2); opacity:0;}}
 @keyframes threadDraw{0%{stroke-dashoffset:1;} 70%{stroke-dashoffset:0;} 100%{stroke-dashoffset:0;}}
 #laneSvg .breathe, #laneSvg .settleRing{transform-box:fill-box; transform-origin:center;}
 #laneSvg .breathe{animation:breathe 5s ease-in-out infinite;}
+body.working #laneSvg .breathe{animation:none;}   /* Work: the breathing element holds still while loading */
 body.awake #laneSvg .breathe{animation-duration:3.6s;}
 #laneSvg .settleRing{animation:ripple 1.2s ease-out 1 forwards;}
 /* Kolam rope rail under the header: two twisted strands, faint at rest,
