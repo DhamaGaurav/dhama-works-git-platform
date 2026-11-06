@@ -9,8 +9,8 @@ Creature: the spider on its web. Personality: patient, connected, watchful. Used
 ## Colour
 Brand layer: ground `#FBF5EC` (dark `#17120F`), ink `#231E1A` (dark `#F3EADF`), accent indigo `#5B4FD6` (dark `#9C93F2`).
 Functional layer:
-- Lanes (data series, fixed order, a new branch takes the next free slot): `#5B4FD6`, `#B3389F`, `#E0532F`, `#1E8FA8`, `#C98A12`. Dark: `#9C93F2`, `#DB78C9`, `#F07F5E`, `#5CC0D8`, `#E4B04A`.
-- Status (never a lane): good `#2A7F58`, recent `#1E7F96`, warn `#A8650F`, crit `#C0392B` (dark: `#5BC18F`, `#5CC0D8`, `#E8A94A`, `#F0806F`).
+- Lanes (data series, fixed order, a new branch takes the next free slot): `#5B4FD6`, `#B3389F`, `#E0532F`, `#1E8FA8`, `#C38611`. Dark: `#9C93F2`, `#DB78C9`, `#F07F5E`, `#5CC0D8`, `#E4B04A`.
+- Status (never a lane): good `#287954`, recent `#1B7489`, warn `#975B0D`, crit `#B83729` (dark: `#5BC18F`, `#5CC0D8`, `#E8A94A`, `#F0806F`).
 - Surfaces: white cards `#FFFFFF` on cream, border `#E8DDCC`, radius 18. Dark values are hand-picked, never auto-brightened.
 
 ## Type
@@ -62,3 +62,4 @@ A "Person details" button appears in the empty gap of the History header (betwee
 - 2026-11-02: The web was still too prominent. Made it smaller and sparser, moved it back to the bottom layer behind the cards, and added the extra fade under layer-2 surfaces.
 - 2026-11-02: Azure DevOps support added without changing the look. Provider is invisible in the UI apart from the repo label, the footer ("Live from Azure DevOps") and dashes where Azure reports no line counts.
 - 2026-11-02: Settings simplified with a GitHub / Azure DevOps toggle (segmented control, counts on each tab). Only the chosen service's fields show: GitHub = token + repos + browse; Azure DevOps = add by address + repos + one token box per server + helper note. The last tab used is remembered; with nothing remembered it opens on the service of the repo on screen. Hidden entirely when FEATURES.azure is off.
+- 2026-11-06: Theme switch added (header button next to Settings: System, then Light, then Dark; saved in `ghp_theme`; applied before first paint so nothing flashes). System, the default, follows the computer. Both palettes already existed; audited every pair the app uses for AA (4.5:1 text, 3:1 lane lines). Fixes: new `--on-accent` token (white on the light accent, near-black on the lighter dark accent, because white on the dark accent failed), and light status colours darkened a touch (good `#287954`, recent `#1B7489`, warn `#975B0D`, crit `#B83729`) plus lane 5 (`#C38611`). Rule: any new colour pair gets checked in both modes.
