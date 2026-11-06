@@ -28,6 +28,7 @@ Optional: a GitHub token with **Pull requests: Read-only** adds pull request tit
 - "Committed by" filter that dims the rows and the graph
 - Person details: pick someone in "Committed by", then open a full-screen view of their branches, collaborators and activity, and (on request) pull requests and files changed
 - Expandable commit descriptions in the history panel and the branch-focus popup
+- Light and dark modes: the button next to the gear in the header cycles Match my computer (the default), Light and Dark, and remembers your choice
 - Works offline once a repo has been fetched, until you refresh
 
 ## Azure DevOps

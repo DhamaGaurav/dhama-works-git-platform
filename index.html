@@ -3,12 +3,12 @@
 :root{
   --bg:#FBF5EC; --surface:#FFFFFF; --surface-2:#F4ECDD; --border:#E8DDCC;
   --text:#231E1A; --text-2:#5E544B; --text-3:#6F645A;
-  --accent:#5B4FD6; --accent-soft:#ECE9FA;
-  --good:#2A7F58; --good-soft:#DFF3E8;
-  --recent:#1E7F96; --recent-soft:#DEF1F6;
-  --warn:#A8650F; --warn-soft:#FBEBC9;
-  --crit:#C0392B; --crit-soft:#FBE1DC;
-  --lane0:#5B4FD6; --lane1:#B3389F; --lane2:#E0532F; --lane3:#1E8FA8; --lane4:#C98A12; --dot:rgba(60,40,20,0.10);
+  --accent:#5B4FD6; --accent-soft:#ECE9FA; --on-accent:#FFFFFF;
+  --good:#287954; --good-soft:#DFF3E8;
+  --recent:#1B7489; --recent-soft:#DEF1F6;
+  --warn:#975B0D; --warn-soft:#FBEBC9;
+  --crit:#B83729; --crit-soft:#FBE1DC;
+  --lane0:#5B4FD6; --lane1:#B3389F; --lane2:#E0532F; --lane3:#1E8FA8; --lane4:#C38611; --dot:rgba(60,40,20,0.10);
   --shadow: 0 1px 2px rgba(60,40,20,0.06), 0 8px 24px -12px rgba(60,40,20,0.18);
   color-scheme: light;
 }
@@ -16,7 +16,7 @@
   :root:not([data-theme="light"]){
     --bg:#17120F; --surface:#211A16; --surface-2:#2A221D; --border:#3A2F28;
     --text:#F3EADF; --text-2:#BDB0A2; --text-3:#988B7E;
-    --accent:#9C93F2; --accent-soft:#2B2748;
+    --accent:#9C93F2; --accent-soft:#2B2748; --on-accent:#17120F;
     --good:#5BC18F; --good-soft:#1B2E24;
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
@@ -29,7 +29,7 @@
 :root[data-theme="dark"]{
   --bg:#17120F; --surface:#211A16; --surface-2:#2A221D; --border:#3A2F28;
     --text:#F3EADF; --text-2:#BDB0A2; --text-3:#988B7E;
-    --accent:#9C93F2; --accent-soft:#2B2748;
+    --accent:#9C93F2; --accent-soft:#2B2748; --on-accent:#17120F;
     --good:#5BC18F; --good-soft:#1B2E24;
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
@@ -231,7 +231,7 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   user-select:none; transition:transform .1s ease;
 }
 .chip:hover{transform:translateY(-1px);}
-.chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff;}
+.chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
 .chip.dot::before{content:''; display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; background:currentColor;}
 
 /* Wide screens: the branch list is a permanent right column beside History
@@ -389,7 +389,7 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   font-size:12px; font-weight:700; padding:7px 13px; border-radius:9px; cursor:pointer;
   border:1px solid var(--border); background:var(--surface-2); color:var(--text);
 }
-.btn.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
 .btn.danger{color:var(--crit);}
 .btn:hover{border-color:var(--accent);}
 .pcommit{padding:8px 0; border-bottom:1px solid var(--border);}
@@ -458,7 +458,7 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
 }
 .provToggle button:hover{color:var(--text);}
-.provToggle button[aria-selected="true"]{background:var(--accent); color:#fff;}
+.provToggle button[aria-selected="true"]{background:var(--accent); color:var(--on-accent);}
 .provToggle .cnt{font-family:'JetBrains Mono',monospace; font-weight:500; opacity:.75; margin-left:4px;}
 .provToggle .cnt:empty{display:none;}
 [role="tabpanel"][hidden]{display:none;}
@@ -580,6 +580,11 @@ footer.note .mono{color:var(--text-3);}
 .pill.pr{background:var(--surface-2); color:var(--text-2); border:1px solid var(--border);}
 .pbr .prTitle{flex-basis:100%; font-size:12.5px; color:var(--text-2); padding-left:20px;}
 </style>
+<script>
+// Theme: "system" (the default) follows the computer's light/dark setting; "light" and "dark"
+// force one. The saved choice is applied here, before anything paints, so there is no flash.
+(function(){ try{ var t = localStorage.getItem('ghp_theme'); if(t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); }catch(e){} })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 
@@ -595,6 +600,7 @@ footer.note .mono{color:var(--text-3);}
       <div class="topRow">
         <select class="repoSelect" id="repoSelect"></select>
         <span class="refreshWrap"><span class="spider" id="spider"><svg viewBox="0 0 34 30" role="img" aria-label="Spider mascot, perched on the refresh button"><g class="legs"><path d="M13 14 L5 8 L2 12"/><path d="M13 16 L4 15 L1 20"/><path d="M13 18 L5 22 L3 27"/><path d="M14 20 L9 25 L8 29"/><path d="M21 14 L29 8 L32 12"/><path d="M21 16 L30 15 L33 20"/><path d="M21 18 L29 22 L31 27"/><path d="M20 20 L25 25 L26 29"/></g><ellipse class="body" cx="17" cy="19" rx="6.5" ry="7.5"/><path class="mark" d="M17 15.5 L19 19 L17 22.5 L15 19 Z"/><g class="head"><circle class="body" cx="17" cy="9.5" r="4.2"/><circle class="eye" cx="15.2" cy="8.8" r="1.1"/><circle class="eye" cx="18.8" cy="8.8" r="1.1"/></g></svg></span><button class="iconBtn" id="refreshBtn" title="Refresh"><span class="refreshIcon">&#8635;</span></button></span>
+        <button class="iconBtn" id="themeBtn" type="button"></button>
         <button class="iconBtn" id="openSettings" title="Settings">&#9881;</button>
         <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
       </div>
@@ -1642,6 +1648,29 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       if(btn) btn.setAttribute('aria-expanded','true');
     }
   });
+
+  // ---- theme switch: System -> Light -> Dark -> System ----
+  const THEMES = ['system', 'light', 'dark'];
+  const THEME_ICONS = {
+    system: '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="3" width="14" height="9.5" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 15.5h5M9 12.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    light: '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.8v2M9 14.2v2M1.8 9h2M14.2 9h2M3.9 3.9l1.4 1.4M12.7 12.7l1.4 1.4M3.9 14.1l1.4-1.4M12.7 5.3l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    dark: '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M14.8 10.6A6.2 6.2 0 0 1 7.4 3.2a6.2 6.2 0 1 0 7.4 7.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  };
+  const THEME_NAMES = { system: 'Match my computer', light: 'Light', dark: 'Dark' };
+  const themeBtn = document.getElementById('themeBtn');
+  function getTheme(){ try{ const t = localStorage.getItem('ghp_theme'); return THEMES.includes(t) ? t : 'system'; }catch(e){ return 'system'; } }
+  function applyTheme(t){
+    const el = document.documentElement;
+    if(t === 'system') el.removeAttribute('data-theme'); else el.setAttribute('data-theme', t);
+    try{ localStorage.setItem('ghp_theme', t); }catch(e){}
+    const next = THEMES[(THEMES.indexOf(t) + 1) % THEMES.length];
+    themeBtn.innerHTML = THEME_ICONS[t];
+    themeBtn.title = 'Theme: ' + THEME_NAMES[t] + '. Click for ' + THEME_NAMES[next] + '.';
+    themeBtn.setAttribute('aria-label', themeBtn.title);
+    window.dispatchEvent(new Event('themechange'));    // the cursor web re-reads the accent colour
+  }
+  themeBtn.addEventListener('click', ()=> applyTheme(THEMES[(THEMES.indexOf(getTheme()) + 1) % THEMES.length]));
+  applyTheme(getTheme());
 
   // ---- settings popup (token + tracked repos) ----
   const settingsPopup = document.getElementById('settingsPopup');
@@ -2913,6 +2942,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   function accent(){ color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#5B4FD6'; }
   accent();
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', accent);
+  addEventListener('themechange', accent);
 
   // nearest Kolam dot to a point: the CSS paints dots at (32i, 32j) and (32i+16, 32j+16)
   function nearestDot(px, py){
