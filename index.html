@@ -208,10 +208,10 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .filters{display:flex; gap:6px; flex-wrap:wrap;}
 /* Small always-visible legend for the lane graph — sits inline with the
    existing "click a branch..." hint, wraps under it on narrow screens. */
-.laneLegend{display:flex; align-items:center; gap:10px; flex-wrap:wrap; row-gap:4px;}
+.laneLegend{display:flex; align-items:center; gap:4px 14px; flex-wrap:wrap; flex:1 1 100%;}
 .llGroup{display:flex; align-items:center; gap:5px; white-space:nowrap;}
 .llGroup b{color:var(--text-2); font-weight:700;}
-.llGroup.wrap{white-space:normal; display:block;}
+#llExtra{display:block; white-space:normal;}
 .llDot{width:7px; height:7px; border-radius:50%; background:var(--text-3); display:inline-block; flex:none;}
 .llDot.ring{background:var(--text-3); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--text-3);}
 .llSwatches{gap:4px;}
@@ -320,7 +320,9 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 }
 .prChip:hover{text-decoration:underline;}
 /* what's going out */
-.outPick{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); font-size:11.5px; color:var(--text-3); font-weight:600;}
+.outPick{padding:8px 18px; border-bottom:1px solid var(--border); font-size:11.5px; color:var(--text-3); font-weight:600;}
+.outPick summary{cursor:pointer; color:var(--accent); font-weight:700;}
+.outPickRow{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding-top:8px;}
 .outPick label{display:flex; align-items:center; gap:6px;}
 .outPick .branchHiSelect{max-width:200px;}
 .outSum{font-size:12.5px; font-weight:700; padding:10px 0 4px;}
@@ -664,7 +666,7 @@ footer.note .mono{color:var(--text-3);}
         <div class="filters" id="graphModeRow"></div>
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
-        <button type="button" class="hintBtn" id="outBtn" style="display:none;" title="Everything on one branch that is not yet on another, grouped by pull request">What&rsquo;s going out</button>
+        <button type="button" class="hintBtn" id="outBtn" style="display:none;" title="Work merged into one branch that has not reached the other yet">Not released yet</button>
         <select class="branchHiSelect" id="branchHighlightSelect" title="Fade every commit that is not on this branch. The lines stay where they are; use Center on to redraw around another branch."><option value="">Highlight&hellip;</option></select>
         <select class="branchHiSelect" id="centerSelect" title="The branch the picture is drawn around: its line runs down the left, and &quot;merged&quot; and &quot;ahead&quot; are counted from it. Pick the branch your team raises pull requests against if it is not the default."><option>Center on&hellip;</option></select>
         <select class="branchHiSelect" id="depthSelect" title="How far back to load history. A shorter window loads faster on big repositories; branches whose last commit is older still appear, but their commit counts only cover what is loaded."><option value="0">History: all</option></select>
@@ -676,8 +678,8 @@ footer.note .mono{color:var(--text-3);}
             <span class="llSwatch" style="background:var(--lane0)"></span><span class="llSwatch" style="background:var(--lane1)"></span><span class="llSwatch" style="background:var(--lane2)"></span><span class="llSwatch" style="background:var(--lane3)"></span><span class="llSwatch" style="background:var(--lane4)"></span>
             = lanes, colors repeat &mdash; not one fixed branch
           </span>
-          <span class="llGroup wrap">drawn around <b id="llDefaultTag">main</b> &mdash; its tag marks the left-hand line</span>
-          <span class="llGroup wrap" id="llExtra" style="display:none;"></span>
+          <span class="llGroup">centered on <b id="llDefaultTag">main</b></span>
+          <span class="llGroup" id="llExtra" style="display:none;"></span>
         </span>
       </div>
       <div class="authorFilterRow" id="authorFilterRow"></div>
@@ -725,15 +727,18 @@ footer.note .mono{color:var(--text-3);}
   <div class="popup" id="outPopup" style="width:640px;">
     <div class="phead2">
       <div>
-        <div class="pname" style="font-family:'Manrope',sans-serif;">What&rsquo;s going out</div>
-        <div class="pmeta" id="outMeta">Everything on one branch that is not yet on another</div>
+        <div class="pname" id="outTitle" style="font-family:'Manrope',sans-serif;">Waiting to be released</div>
+        <div class="pmeta" id="outMeta">Merged into one branch, not yet in the other</div>
       </div>
       <button class="drawerClose" id="closeOut" aria-label="Close">&times;</button>
     </div>
-    <div class="outPick">
-      <label>From <select class="branchHiSelect" id="outFrom"></select></label>
-      <label>not yet in <select class="branchHiSelect" id="outInto"></select></label>
-    </div>
+    <details class="outPick">
+      <summary>Compare other branches</summary>
+      <div class="outPickRow">
+        <label>Work is in <select class="branchHiSelect" id="outFrom"></select></label>
+        <label>but not yet in <select class="branchHiSelect" id="outInto"></select></label>
+      </div>
+    </details>
     <div class="pbody" id="outBody"></div>
     <div class="pfoot"><span class="pnote" id="outCopied" style="margin-right:auto;"></span><button class="btn" id="outCopy">Copy as release notes</button></div>
   </div>
@@ -2586,14 +2591,14 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     const llExtra = document.getElementById('llExtra');
     if(llExtra){
       const bits = [];
-      if((DATA.integration || []).some(s=> byName[s.name])) bits.push('<b>filled tag</b> = branch that pull requests are raised against');
+      if((DATA.integration || []).some(s=> byName[s.name])) bits.push('<b>filled tag</b> = where pull requests land');
       if(goneCount) bits.push('<b>dashed tag</b> = deleted after merge');
       llExtra.innerHTML = bits.join(' &middot; ');
       llExtra.style.display = bits.length ? '' : 'none';
     }
     renderCenterSelect();
     renderDepthSelect();
-    if(outBtn) outBtn.style.display = '';
+    syncOutBtn();
     document.getElementById('footerNote').innerHTML =
       `Live from ${meta.service || 'GitHub'} &middot; <span class="mono">${escapeHtml(meta.fullName)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`
       + (DATA.pulls_error ? ' &middot; <span class="refreshedNote">pull requests unavailable, so deleted branches stay unnamed</span>' : '')
@@ -2623,7 +2628,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     const pref = currentMeta ? Store.getTrunk(currentMeta.id) : '';
     const chosen = pref === '__default' ? '__default' : (pref && live.some(b=> b.name === pref) ? pref : (DATA.trunk_auto ? DATA.default_branch : '__default'));
     let h = opt('__default', `Center on: ${repoDef} (default)`, chosen === '__default');
-    if(targets.length) h += `<optgroup label="Pull requests go here">${targets.map(n=> opt(n, n, chosen === n)).join('')}</optgroup>`;
+    if(targets.length) h += `<optgroup label="Where pull requests land">${targets.map(n=> opt(n, n, chosen === n)).join('')}</optgroup>`;
     if(others.length) h += `<optgroup label="Other branches">${others.map(n=> opt(n, n, chosen === n)).join('')}</optgroup>`;
     centerSelect.innerHTML = h;
     centerSelect.classList.toggle('active', chosen !== '__default');
@@ -2718,7 +2723,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       if(s.open) parts.push(`${s.open} open`);
       if(s.merged) parts.push(`${s.merged} merged`);
       if(s.closed) parts.push(`${s.closed} closed`);
-      badges += `<span class="badge integ" title="Pull requests are raised against this branch">PR target &middot; ${parts.join(' &middot; ')}</span>`;
+      badges += `<span class="badge integ" title="People raise pull requests into this branch">Pull requests: ${parts.join(' &middot; ')}</span>`;
       card.classList.add('integ');
     }
     if(b.deleted) badges += '<span class="badge gone">deleted after merge</span>';
@@ -2777,8 +2782,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     if(integ.length){
       const h = document.createElement('div');
       h.className = 'groupHead integ'; h.style.cursor = 'default';
-      h.innerHTML = `<span>Pull requests go here &middot; ${integ.length}</span>`;
+      h.innerHTML = `<span>Where pull requests land &middot; ${integ.length}</span>`;
       branchListEl.appendChild(h);
+      const cap = document.createElement('div');
+      cap.className = 'pnote';
+      cap.style.padding = '0 6px 6px';
+      cap.textContent = `People raise pull requests into ${integ.length === 1 ? 'this branch' : 'these branches'}, not into ${DATA.repo_default_branch || DATA.default_branch}.`;
+      branchListEl.appendChild(cap);
       integ.forEach(b=> branchListEl.appendChild(branchCard(b)));
     }
     const shown = (showAllOpen || q) ? open : open.slice(0, OPEN_PAGE);
@@ -3567,15 +3577,16 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     }
     if(from === into){ outBody.innerHTML = '<div class="pnote">Pick two different branches.</div>'; outNotes = ''; return; }
     const o = outgoing(from, into);
-    document.getElementById('outMeta').textContent = `${from} \u2192 ${into}`;
+    document.getElementById('outTitle').textContent = `Waiting to reach ${into}`;
+    document.getElementById('outMeta').textContent = `In ${from}, but not yet in ${into}`;
     let h = '';
     if(o.behind) h += `<div class="outWarn">${escapeHtml(into)} also has ${plural(o.behind, 'commit')} that ${escapeHtml(from)} does not (a hotfix, perhaps). If ${escapeHtml(into)} is where you ship, bring ${o.behind === 1 ? 'it' : 'them'} into ${escapeHtml(from)} first.</div>`;
     if(!o.commits && !o.merges.length){
-      h += `<div class="outGood">Nothing: everything on ${escapeHtml(from)} is already in ${escapeHtml(into)}.</div>`;
+      h += `<div class="outGood">Nothing is waiting: everything in ${escapeHtml(from)} is already in ${escapeHtml(into)}.</div>`;
       outBody.innerHTML = h; outNotes = ''; return;
     }
-    h += `<div class="outSum">${plural(o.groups.length, 'pull request')} &middot; ${plural(o.commits, 'commit')} &middot; ${plural(o.people, 'person', 'people')}${o.oldest ? ' &middot; oldest ' + relTime(o.oldest) : ''}</div>`;
-    const notes = [`What's going out: ${from} -> ${into} (${plural(o.groups.length, 'pull request')}, ${plural(o.commits, 'commit')})`, ''];
+    h += `<div class="outSum"><b>${plural(o.groups.length, 'pull request')}</b> (${plural(o.commits, 'commit')} by ${plural(o.people, 'person', 'people')}) ${o.groups.length === 1 ? 'is' : 'are'} in ${escapeHtml(from)} but not in ${escapeHtml(into)} yet.${o.oldest ? ' The oldest work is ' + relTime(o.oldest).replace(/ ago$/, '') + ' old.' : ''} This is what merging ${escapeHtml(from)} into ${escapeHtml(into)} would bring.</div>`;
+    const notes = [`In ${from}, not yet in ${into} (${plural(o.groups.length, 'pull request')}, ${plural(o.commits, 'commit')})`, ''];
     o.groups.forEach(g=>{
       const who = g.pr.user || g.landed.author;
       h += `<div class="outGroup">
@@ -3597,13 +3608,32 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     outNotes = notes.join('\n');
   }
 
+  // The branch the team merges work into, and the branch that work is meant to reach.
+  // By default: the center branch going into the repo default; when those are the
+  // same branch, the branch pull requests land on. None when there is no such pair.
+  function defaultOutPair(){
+    const repoDef = DATA.repo_default_branch || DATA.default_branch, trunk = DATA.default_branch;
+    const target = (DATA.integration || []).map(s=> s.name).find(n=> byName[n] && n !== repoDef) || '';
+    const from = trunk !== repoDef ? trunk : target;
+    return from && byName[from] && byName[repoDef] ? { from, into: repoDef } : null;
+  }
+  // The button says what is waiting, so the answer is visible without opening anything.
+  function syncOutBtn(){
+    if(!outBtn) return;
+    const pair = DATA ? defaultOutPair() : null;
+    if(!pair){ outBtn.style.display = 'none'; return; }
+    let prs = 0, direct = 0;
+    try{ const o = outgoing(pair.from, pair.into); prs = o.groups.length; direct = o.direct.length; }catch(e){}
+    outBtn.textContent = (prs || direct)
+      ? `Not in ${pair.into} yet \u00b7 ${plural(prs, 'PR')}${direct ? ' + ' + direct + ' direct' : ''}`
+      : `${pair.into} is up to date`;
+    outBtn.title = `Work merged into ${pair.from} that has not reached ${pair.into} yet. Click for the list.`;
+    outBtn.style.display = '';
+  }
   function fillOutPickers(){
     const live = DATA.branches.filter(b=> !b.deleted).map(b=> b.name).sort((a,b)=> a.localeCompare(b));
-    const repoDef = DATA.repo_default_branch || DATA.default_branch, trunk = DATA.default_branch;
-    // by default: the branch the work is centered on, going into the repo default;
-    // when those are the same branch, the branch pull requests go to
-    const target = (DATA.integration || []).map(s=> s.name).find(n=> byName[n] && n !== repoDef) || '';
-    const from = trunk !== repoDef ? trunk : target, into = repoDef;
+    const pair = defaultOutPair() || { from:'', into: DATA.repo_default_branch || DATA.default_branch };
+    const from = pair.from, into = pair.into;
     const opts = sel=> '<option value="">Pick a branch</option>' + live.map(n=> `<option value="${escapeHtml(n)}"${n === sel ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
     outFrom.innerHTML = opts(from); outInto.innerHTML = opts(into);
   }
