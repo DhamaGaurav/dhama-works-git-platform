@@ -319,6 +319,26 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .prChip:hover{text-decoration:underline;}
+/* what's going out */
+.outPick{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); font-size:11.5px; color:var(--text-3); font-weight:600;}
+.outPick label{display:flex; align-items:center; gap:6px;}
+.outPick .branchHiSelect{max-width:200px;}
+.outSum{font-size:12.5px; font-weight:700; padding:10px 0 4px;}
+.outWarn{background:var(--warn-soft); color:var(--warn); font-size:12px; font-weight:600; padding:8px 10px; border-radius:8px; margin:8px 0;}
+.outGood{background:var(--good-soft); color:var(--good); font-size:12.5px; font-weight:700; padding:10px 12px; border-radius:8px; margin:10px 0;}
+.outHead2{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); padding:14px 0 4px;}
+.outGroup{padding:10px 0; border-bottom:1px solid var(--border);}
+.outGroup:last-child{border-bottom:none;}
+.outHead{display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;}
+.outTitle{font-size:13px; font-weight:700;}
+.outMeta{font-size:11px; color:var(--text-3); margin-top:3px;}
+.outGroup details{margin-top:4px; font-size:11.5px;}
+.outGroup summary{cursor:pointer; color:var(--text-2); font-weight:700;}
+.outCommit{display:flex; gap:8px; padding:3px 0 3px 4px; align-items:baseline;}
+.outCommit .mono{color:var(--text-3); font-size:10.5px; flex:none;}
+.outCommit .who{color:var(--text-3); margin-left:auto; flex:none; padding-left:8px;}
+.linkBtn{background:none; border:0; padding:0; color:var(--accent); font-family:inherit; font-size:11px; font-weight:700; cursor:pointer;}
+.linkBtn:hover{text-decoration:underline;}
 
 /* graph */
 #graphScroll{flex:1; min-height:0; overflow-y:auto; overflow-x:auto; position:relative;}
@@ -455,6 +475,12 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .branchHiSelect.active{color:var(--accent); border-color:var(--accent);}
+.hintBtn{
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; flex:none;
+  background:var(--accent-soft); border:1px solid var(--accent); color:var(--accent);
+  padding:4px 10px; border-radius:7px; cursor:pointer;
+}
+.hintBtn:hover{background:var(--accent); color:var(--on-accent);}
 .iconBtn{
   display:inline-flex; align-items:center; justify-content:center;
   background:var(--surface); border:1px solid var(--border); color:var(--text-2);
@@ -638,8 +664,10 @@ footer.note .mono{color:var(--text-3);}
         <div class="filters" id="graphModeRow"></div>
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
+        <button type="button" class="hintBtn" id="outBtn" style="display:none;" title="Everything on one branch that is not yet on another, grouped by pull request">What&rsquo;s going out</button>
         <select class="branchHiSelect" id="branchHighlightSelect" title="Fade every commit that is not on this branch. The lines stay where they are; use Center on to redraw around another branch."><option value="">Highlight&hellip;</option></select>
         <select class="branchHiSelect" id="centerSelect" title="The branch the picture is drawn around: its line runs down the left, and &quot;merged&quot; and &quot;ahead&quot; are counted from it. Pick the branch your team raises pull requests against if it is not the default."><option>Center on&hellip;</option></select>
+        <select class="branchHiSelect" id="depthSelect" title="How far back to load history. A shorter window loads faster on big repositories; branches whose last commit is older still appear, but their commit counts only cover what is loaded."><option value="0">History: all</option></select>
         <span>click a branch to see its history &middot; click a dot for that commit</span>
         <span class="laneLegend">
           <span class="llGroup"><span class="llDot"></span>commit</span>
@@ -691,6 +719,23 @@ footer.note .mono{color:var(--text-3);}
     <div class="pfoot">
       <button class="btn primary" id="pLocate">Show in history</button>
     </div>
+  </div>
+
+  <!-- what's going out: commits on one branch that are not yet on another, grouped by pull request -->
+  <div class="popup" id="outPopup" style="width:640px;">
+    <div class="phead2">
+      <div>
+        <div class="pname" style="font-family:'Manrope',sans-serif;">What&rsquo;s going out</div>
+        <div class="pmeta" id="outMeta">Everything on one branch that is not yet on another</div>
+      </div>
+      <button class="drawerClose" id="closeOut" aria-label="Close">&times;</button>
+    </div>
+    <div class="outPick">
+      <label>From <select class="branchHiSelect" id="outFrom"></select></label>
+      <label>not yet in <select class="branchHiSelect" id="outInto"></select></label>
+    </div>
+    <div class="pbody" id="outBody"></div>
+    <div class="pfoot"><span class="pnote" id="outCopied" style="margin-right:auto;"></span><button class="btn" id="outCopy">Copy as release notes</button></div>
   </div>
 
   <!-- settings: GitHub token + tracked repos, all stored only in this browser's localStorage -->
@@ -823,6 +868,9 @@ const Store = (function(){
     // Azure DevOps parent ids already learned, per repo: {sha: [parent shas]}. A commit's parents never change.
     getParents(repo){ try{ return JSON.parse(safeGet('ghp_parents_' + repo) || '{}') || {}; }catch(e){ return {}; } },
     setParents(repo, map){ try{ return safeSet('ghp_parents_' + repo, JSON.stringify(map)); }catch(e){ return false; } },
+    // How far back to load history for a repo, in days. 0 = all of it.
+    getDepth(repo){ const n = Number(safeGet('ghp_depth_' + repo)); return n > 0 ? n : 0; },
+    setDepth(repo, days){ return days > 0 ? safeSet('ghp_depth_' + repo, String(days)) : (safeRemove('ghp_depth_' + repo), true); },
     getLastRepo(){ return safeGet(K_LAST) || ''; },
     setLastRepo(r){ return safeSet(K_LAST, r); },
     getCache(repo){
@@ -841,6 +889,53 @@ const Store = (function(){
     },
     clearCache(repo){ safeRemove(K_CACHE_PREFIX+repo); },
   };
+})();
+
+// =====================================================================
+// RAW STORE — the commits already downloaded, kept per repo in IndexedDB
+// (localStorage is too small for a long history). A refresh then only asks the
+// server about what is new. If IndexedDB is unavailable (private window), it
+// still holds them in memory for as long as the page is open.
+// =====================================================================
+const RawStore = (function(){
+  const mem = {};
+  let dbp = null;
+  function open(){
+    if(dbp) return dbp;
+    dbp = new Promise(res => {
+      try{
+        const rq = indexedDB.open('ghp_raw', 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore('repos');
+        rq.onsuccess = () => res(rq.result);
+        rq.onerror = rq.onblocked = () => res(null);
+      }catch(e){ res(null); }
+    });
+    return dbp;
+  }
+  async function load(id){
+    if(mem[id]) return mem[id];
+    const db = await open(); if(!db) return null;
+    return new Promise(res => {
+      try{
+        const rq = db.transaction('repos').objectStore('repos').get(id);
+        rq.onsuccess = () => { mem[id] = rq.result || null; res(mem[id]); };
+        rq.onerror = () => res(null);
+      }catch(e){ res(null); }
+    });
+  }
+  async function save(id, value){
+    mem[id] = value;
+    const db = await open(); if(!db) return false;
+    return new Promise(res => {
+      try{
+        const tx = db.transaction('repos', 'readwrite');
+        tx.objectStore('repos').put(value, id);
+        tx.oncomplete = () => res(true);
+        tx.onerror = tx.onabort = () => res(false);
+      }catch(e){ res(false); }
+    });
+  }
+  return { load, save };
 })();
 
 // =====================================================================
@@ -905,20 +1000,42 @@ const GitHub = (function(){
     return out;
   }
 
-  // Fetches commit history reachable from each branch tip and merges/dedupes
-  // by sha, the browser-side equivalent of `git log --all`. Each GitHub
-  // commit object already carries parent shas, so no extra graph-walking
-  // calls are needed beyond pagination. branchTips may be plain shas or
-  // {name, sha} branch objects.
-  async function getAllCommits(owner, repo, branchTips, token, onProgress, softTips){
-    const seen = new Map(); // sha -> commit dict
+  // Fetches commit history reachable from each branch tip (the browser-side
+  // equivalent of `git log --all`) and returns only the commits NOT already in
+  // opts.known, so a refresh costs about one request per branch that moved.
+  // branchTips may be plain shas or {name, sha} branch objects. Each GitHub
+  // commit already carries its parent shas.
+  // A tip is walked newest-first until every parent of every new commit is one we
+  // already have or have just fetched; their own histories are complete, so nothing
+  // is missed. (Stopping at the first known commit would miss older commits only
+  // this branch has, because the log is in date order.)
+  // opts.sinceISO limits how far back to go; softTips (branches deleted after
+  // merge) are best-effort extras and may stop early.
+  async function getAllCommits(owner, repo, branchTips, token, onProgress, softTips, opts){
+    opts = opts || {};
+    const known = opts.known || new Map();
+    const since = opts.sinceISO ? '&since=' + encodeURIComponent(opts.sinceISO) : '';
+    const seen = new Map(); // fetched by this call
+    const have = sha => known.has(sha) || seen.has(sha);
     let branchIdx = 0;
-    // Does not stop at the first commit it has already seen: the log is in date
-    // order, so a newer shared commit can come before older commits only this
-    // branch has. softTips (branches deleted after merge) may stop early: they
-    // are recent, and are only a best-effort extra.
+    function toCommit(c){
+      const fullMsg = (c.commit && c.commit.message) || '';
+      const nl = fullMsg.indexOf('\n');
+      return {
+        sha: c.sha,
+        parents: (c.parents || []).map(p => p.sha),
+        author: (c.commit && c.commit.author && c.commit.author.name) || 'unknown',
+        date: (c.commit && c.commit.committer && c.commit.committer.date) || (c.commit && c.commit.author && c.commit.author.date),
+        subject: nl === -1 ? fullMsg : fullMsg.slice(0, nl),
+        // everything after the subject line — trimmed of the blank
+        // separator line git conventionally puts between them
+        body: nl === -1 ? '' : fullMsg.slice(nl + 1).replace(/^\n+/, '').trim(),
+      };
+    }
     async function walk(tip, soft){
-      let path = `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(tip)}&per_page=100`;
+      if(have(tip)) return; // its whole history is already here
+      const missing = new Set([tip]); // not done until the tip itself has turned up
+      let path = `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(tip)}&per_page=100${since}`;
       let guard = 0;
       while(path && guard < 20){
         guard++;
@@ -926,23 +1043,20 @@ const GitHub = (function(){
         const json = await res.json();
         let fresh = 0;
         for(const c of json){
-          if(seen.has(c.sha)) continue;
+          if(have(c.sha)) continue;
           fresh++;
-          const fullMsg = (c.commit && c.commit.message) || '';
-          const nl = fullMsg.indexOf('\n');
-          seen.set(c.sha, {
-            sha: c.sha,
-            parents: (c.parents || []).map(p => p.sha),
-            author: (c.commit && c.commit.author && c.commit.author.name) || 'unknown',
-            date: (c.commit && c.commit.committer && c.commit.committer.date) || (c.commit && c.commit.author && c.commit.author.date),
-            subject: nl === -1 ? fullMsg : fullMsg.slice(0, nl),
-            // everything after the subject line — trimmed of the blank
-            // separator line git conventionally puts between them
-            body: nl === -1 ? '' : fullMsg.slice(nl + 1).replace(/^\n+/, '').trim(),
-          });
+          const d = toCommit(c); seen.set(d.sha, d);
+          missing.delete(d.sha);
+          for(const q of d.parents) if(!have(q)) missing.add(q);
         }
+        if(!missing.size) break;
         if(soft && !fresh) break;
         path = parseNextLink(res.headers.get('link'));
+      }
+      // a branch whose tip is older than the history limit still gets its tip commit
+      if(opts.sinceISO && !soft && !have(tip)){
+        const d = toCommit(await (await req(`/repos/${owner}/${repo}/commits/${tip}`, token)).json());
+        seen.set(d.sha, d);
       }
     }
     for(const tip of branchTips){
@@ -955,7 +1069,7 @@ const GitHub = (function(){
     let soft = 0;
     for(const tip of (softTips || [])){
       soft++;
-      if(seen.has(tip)) continue; // already part of a branch's history
+      if(have(tip)) continue;
       if(onProgress) onProgress(`Fetching branches deleted after merge (${soft}/${softTips.length})…`);
       try{ await walk(tip, true); }catch(e){ if(e && e.status === 403) break; }
     }
@@ -1204,67 +1318,86 @@ const Azure = (function(){
     if(failed) throw failed;
   }
 
-  // Commit history reachable from each branch, merged and deduped by sha.
-  // branches are {name, sha} (the history is asked for by branch name) or plain
-  // shas (asked for as a commit). The list does not carry parents: see fillParents.
-  async function getAllCommits(r, branches, token, onProgress, softTips){
-    const seen = new Map();
+  // Commit history reachable from each branch, returning only the commits NOT
+  // already in opts.known. branches are {name, sha} (the history is asked for by
+  // branch name) or plain shas (asked for as a commit). The list does not carry
+  // parents, so each page's new commits get theirs from fillParents.
+  // A branch is walked newest-first until every parent of every new commit is one we
+  // already have or have just fetched; their own histories are complete, so nothing
+  // is missed, and a refresh costs about one page per branch that moved. (Stopping at
+  // the first known commit would miss older commits only this branch has: the list is
+  // in date order.) It also stops on an empty page, a short page, a page that repeats
+  // the previous one (the server ignored $skip), or the 20-page guard.
+  // opts.sinceISO limits how far back to go; softTips (branches deleted after
+  // merge) are best-effort extras and may stop early.
+  async function getAllCommits(r, branches, token, onProgress, softTips, opts){
+    opts = opts || {};
+    const known = opts.known || new Map();
+    const since = opts.sinceISO ? '&searchCriteria.fromDate=' + encodeURIComponent(opts.sinceISO) : '';
+    const seen = new Map(); // fetched by this call
+    const have = sha => known.has(sha) || seen.has(sha);
     const PAGE = 100;
     let idx = 0;
-    // Does not stop at the first commit it has already seen: the list is in date
-    // order, so a newer shared commit can come before older commits only this
-    // branch has. It stops on an empty page, a short page, a page that repeats
-    // the previous one (the server ignored $skip), or the 20-page guard.
-    // softTips (branches deleted after merge) may stop early: they are recent
-    // and only a best-effort extra.
-    async function walk(version, type, soft){
+    function toCommit(c){
+      const msg = c.comment || '';
+      const nl = msg.indexOf('\n');
+      return {
+        sha: c.commitId,
+        parents: normParents(c.parents),
+        author: (c.author && c.author.name) || 'unknown',
+        date: (c.committer && c.committer.date) || (c.author && c.author.date),
+        subject: nl === -1 ? msg : msg.slice(0, nl),
+        body: nl === -1 ? '' : msg.slice(nl + 1).replace(/^\n+/, '').trim(),
+      };
+    }
+    async function walk(version, type, tipSha, soft){
+      if(have(tipSha)) return; // its whole history is already here
+      const missing = new Set([tipSha]); // not done until the tip itself has turned up
       let skip = 0, lastFirst = null;
       for(let guard = 0; guard < 20; guard++){
         const url = `${repoApi(r)}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(version)}`
-          + `&searchCriteria.itemVersion.versionType=${type}&searchCriteria.$top=${PAGE}&searchCriteria.$skip=${skip}`;
+          + `&searchCriteria.itemVersion.versionType=${type}&searchCriteria.$top=${PAGE}&searchCriteria.$skip=${skip}${since}`;
         const json = await withRetry(async () => (await req(url, token)).json());
         const list = json.value || [];
         if(!list.length) break;
         if(list[0].commitId === lastFirst) break;
         lastFirst = list[0].commitId;
-        let fresh = 0;
+        const page = [];
         for(const c of list){
-          if(seen.has(c.commitId)) continue;
-          fresh++;
-          const msg = c.comment || '';
-          const nl = msg.indexOf('\n');
-          seen.set(c.commitId, {
-            sha: c.commitId,
-            parents: normParents(c.parents),
-            author: (c.author && c.author.name) || 'unknown',
-            date: (c.committer && c.committer.date) || (c.author && c.author.date),
-            subject: nl === -1 ? msg : msg.slice(0, nl),
-            body: nl === -1 ? '' : msg.slice(nl + 1).replace(/^\n+/, '').trim(),
-          });
+          if(have(c.commitId)) continue;
+          const d = toCommit(c); seen.set(d.sha, d); page.push(d);
         }
+        if(page.length) await fillParents(r, page, token, onProgress);
+        for(const d of page){
+          missing.delete(d.sha);
+          for(const q of d.parents) if(!have(q)) missing.add(q);
+        }
+        if(!missing.size) break;
         if(list.length < PAGE) break;
-        if(soft && !fresh) break;
+        if(soft && !page.length) break;
         skip += PAGE;
+      }
+      // a branch whose tip is older than the history limit still gets its tip commit
+      if(opts.sinceISO && !soft && !have(tipSha)){
+        const d = toCommit(await withRetry(async () => (await req(`${repoApi(r)}/commits/${tipSha}`, token)).json()));
+        seen.set(d.sha, d);
       }
     }
     for(const b of branches){
       idx++;
       if(onProgress) onProgress(`Fetching commit history (${idx}/${branches.length} branches)…`);
-      if(typeof b === 'string') await walk(b, 'commit', false);
-      else await walk(b.name, 'branch', false);
+      if(typeof b === 'string') await walk(b, 'commit', b, false);
+      else await walk(b.name, 'branch', b.sha, false);
     }
     // Tips of branches deleted after their pull request completed: best-effort.
     let soft = 0;
     for(const tip of (softTips || [])){
       soft++;
-      if(seen.has(tip)) continue;
+      if(have(tip)) continue;
       if(onProgress) onProgress(`Fetching branches deleted after merge (${soft}/${softTips.length})…`);
-      try{ await walk(tip, 'commit', true); }catch(e){ if(e && (e.status === 401 || e.status === 403)) break; }
+      try{ await walk(tip, 'commit', tip, true); }catch(e){ if(e && (e.status === 401 || e.status === 403)) break; }
     }
-    const list = [...seen.values()];
-    await fillParents(r, list, token, onProgress);
-    return list;
-
+    return [...seen.values()];
   }
 
   // Also read when the graph loads (maxPages: 2), to find branches deleted
@@ -1322,7 +1455,7 @@ const Providers = (function(){
         token: tk,
         getRepoInfo: () => Azure.getRepoInfo(ref, tk()),
         getAllBranches: () => Azure.getAllBranches(ref, tk()),
-        getAllCommits: (tips, onProgress, softTips) => Azure.getAllCommits(ref, tips, tk(), onProgress, softTips),
+        getAllCommits: (tips, onProgress, softTips, opts) => Azure.getAllCommits(ref, tips, tk(), onProgress, softTips, opts),
         getPulls: opts => Azure.getPulls(ref, tk(), opts),
         getCommitFiles: sha => Azure.getCommitFiles(ref, sha, tk()),
       };
@@ -1336,7 +1469,7 @@ const Providers = (function(){
       token: tk,
       getRepoInfo: () => GitHub.getRepoInfo(owner, repo, tk()),
       getAllBranches: () => GitHub.getAllBranches(owner, repo, tk()),
-      getAllCommits: (tips, onProgress, softTips) => GitHub.getAllCommits(owner, repo, tips, tk(), onProgress, softTips),
+      getAllCommits: (tips, onProgress, softTips, opts) => GitHub.getAllCommits(owner, repo, tips, tk(), onProgress, softTips, opts),
       getPulls: opts => GitHub.getPulls(owner, repo, tk(), opts),
       getCommitFiles: sha => GitHub.getCommitFiles(owner, repo, sha, tk()),
     };
@@ -1817,6 +1950,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
         refs: refsBySha[sha] || [],
         event: eventBySha[sha] || null,
         pr: prBySha[sha] || null,
+        placeholder: !!c.placeholder,
         branch_start: branchStartBySha[sha] || null,
       };
     });
@@ -1877,6 +2011,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     trunk_auto: !!opts.auto,                 // true when the trunk was picked for the user
     integration: baseStats.filter(s => s.name !== repoDefault),
     pull_count: pulls.length,
+    depth_days: opts.depthDays || 0,           // 0 = all history was asked for
     pulls_error: opts.pullsError || '',
     owner_by_sha: ownerBySha,
     now: nowISO,
@@ -1932,7 +2067,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
   // ---- branch-focus popup ----
   const popup = document.getElementById('branchPopup');
   const popupBackdrop = document.getElementById('popupBackdrop');
-  function closePopup(){ popup.classList.remove('show'); popupBackdrop.classList.remove('show'); }
+  function closePopup(){ popup.classList.remove('show'); popupBackdrop.classList.remove('show'); const o = document.getElementById('outPopup'); if(o) o.classList.remove('show'); }
   document.getElementById('closePopup').addEventListener('click', closePopup);
   popupBackdrop.addEventListener('click', closePopup);
 
@@ -2288,9 +2423,10 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     loadRepo(repoSelect.value, {background:false});
   });
 
-  document.getElementById('refreshBtn').addEventListener('click', ()=>{
+  document.getElementById('refreshBtn').addEventListener('click', (ev)=>{
     if(!repoSelect.value){ openSettings(); return; }
-    loadRepo(repoSelect.value, {background:false, forceFresh:true});
+    // Shift-click forgets the commits kept in this browser and downloads everything again
+    loadRepo(repoSelect.value, {background:false, forceFresh:true, rebuild: !!(ev && ev.shiftKey)});
   });
 
   function setCenterState(html){
@@ -2308,14 +2444,30 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
   // The last fetch, kept in memory so the "Center on" choice can rebuild
   // the graph without fetching again. Null when the page is showing cached data.
   let lastRaw = null;
+  function reachableCommits(map, tips){
+    const seen = new Set(), stack = tips.slice();
+    while(stack.length){
+      const sha = stack.pop();
+      if(seen.has(sha) || !map.has(sha)) continue;
+      seen.add(sha);
+      for(const q of map.get(sha).parents) stack.push(q);
+    }
+    return [...seen].map(sha=> map.get(sha));
+  }
   function buildFromRaw(raw, nowISO){
     const stats = baseStatsFrom(raw.pulls);
     const live = new Set(raw.branches.filter(b=> !b.deleted).map(b=> b.name));
     const pref = Store.getTrunk(raw.id);
     const trunk = pickTrunk(stats, live, raw.info.defaultBranch, pref);
-    return buildGraphData(raw.branches, raw.commits, trunk, nowISO, {
+    // the stored history can reach further back than the limit asked for now; show only the window
+    let commits = raw.commits;
+    if(raw.sinceISO){
+      const cut = new Date(raw.sinceISO).getTime(), tips = new Set(raw.branches.map(b=> b.sha));
+      commits = commits.filter(c=> tips.has(c.sha) || new Date(c.date).getTime() >= cut);
+    }
+    return buildGraphData(raw.branches, commits, trunk, nowISO, {
       pulls: raw.pulls, repoDefault: raw.info.defaultBranch, baseStats: stats,
-      auto: !pref && trunk !== raw.info.defaultBranch, pullsError: raw.pullsError,
+      auto: !pref && trunk !== raw.info.defaultBranch, pullsError: raw.pullsError, depthDays: raw.depthDays || 0,
     });
   }
 
@@ -2354,11 +2506,23 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       try{ pulls = await cl.getPulls({ maxPages: PR_PAGES }); }
       catch(err){ pullsError = (err.status === 401 || err.status === 403 || err.status === 404) ? cl.pullsHint : (err.message || String(err)); }
       const ghosts = ghostBranchesFrom(liveBranches, pulls, MAX_GHOSTS);
-      const commits = await cl.getAllCommits(liveBranches, (msg)=>{
+      // Commits downloaded on an earlier visit are reused: only what is new is fetched.
+      // Stored history only helps if it reaches back at least as far as is asked for now.
+      const depthDays = Store.getDepth(fullName);
+      const sinceISO = depthDays ? new Date(Date.now() - depthDays * 86400000).toISOString() : '';
+      const stored = opts.rebuild ? null : await RawStore.load(fullName);
+      const reaches = stored && stored.commits && (!stored.depthDays || (depthDays && stored.depthDays >= depthDays));
+      const known = new Map((reaches ? stored.commits : []).map(c=> [c.sha, c]));
+      const progress = (msg)=>{
         const d = document.getElementById('loadingDetail');
-        if(d) d.textContent = msg;
-      }, ghosts.map(g=>g.sha));
-      lastRaw = { id: fullName, info, branches: liveBranches.concat(ghosts), commits, pulls, pullsError };
+        if(d) d.textContent = (known.size ? `${known.size} commits already in this browser. ` : '') + msg;
+      };
+      const fresh = await cl.getAllCommits(liveBranches, progress, ghosts.map(g=>g.sha), { known, sinceISO });
+      // keep only commits some current branch can still reach (a force-push or a deleted branch orphans the rest)
+      const all = new Map(known); fresh.forEach(c=> all.set(c.sha, c));
+      const commits = reachableCommits(all, liveBranches.concat(ghosts).map(b=> b.sha));
+      RawStore.save(fullName, { commits, depthDays, savedAt: new Date().toISOString() });
+      lastRaw = { id: fullName, info, branches: liveBranches.concat(ghosts), commits, pulls, pullsError, sinceISO, depthDays };
       const nowISO = new Date().toISOString();
       const built = buildFromRaw(lastRaw, nowISO);
       Store.setCache(fullName, built);
@@ -2378,7 +2542,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       refreshBtn.classList.remove('spin');
       document.body.classList.remove('working');
       refreshBtn.disabled = false;
-      refreshBtn.title = 'Refresh';
+      refreshBtn.title = 'Refresh (Shift-click to download all history again)';
     }
   }
 
@@ -2427,10 +2591,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       llExtra.innerHTML = bits.join(' &middot; ');
       llExtra.style.display = bits.length ? '' : 'none';
     }
-    renderTrunkSelect();
+    renderCenterSelect();
+    renderDepthSelect();
+    if(outBtn) outBtn.style.display = '';
     document.getElementById('footerNote').innerHTML =
       `Live from ${meta.service || 'GitHub'} &middot; <span class="mono">${escapeHtml(meta.fullName)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`
-      + (DATA.pulls_error ? ' &middot; <span class="refreshedNote">pull requests unavailable, so deleted branches stay unnamed</span>' : '');
+      + (DATA.pulls_error ? ' &middot; <span class="refreshedNote">pull requests unavailable, so deleted branches stay unnamed</span>' : '')
+      + (DATA.depth_days ? ` &middot; <span class="refreshedNote">history limited to the last ${DATA.depth_days} days</span>` : '');
 
     renderStats();
     renderFilters();
@@ -2446,7 +2613,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
   // "Center on": the branch the graph is drawn around (its line is lane 0), and "merged" and "ahead"
   // are worked out from. Automatic picks the branch most pull requests target.
   const centerSelect = document.getElementById('centerSelect');
-  function renderTrunkSelect(){
+  function renderCenterSelect(){
     if(!centerSelect) return;
     const repoDef = DATA.repo_default_branch || DATA.default_branch;
     const live = DATA.branches.filter(b=> !b.deleted);
@@ -2461,6 +2628,19 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     centerSelect.innerHTML = h;
     centerSelect.classList.toggle('active', chosen !== '__default');
   }
+  const depthSelect = document.getElementById('depthSelect');
+  const DEPTHS = [[0,'History: all'],[365,'History: last 12 months'],[180,'History: last 6 months'],[90,'History: last 90 days'],[30,'History: last 30 days']];
+  function renderDepthSelect(){
+    if(!depthSelect) return;
+    const cur = currentMeta ? Store.getDepth(currentMeta.id) : 0;
+    depthSelect.innerHTML = DEPTHS.map(([d,l])=> `<option value="${d}"${d === cur ? ' selected' : ''}>${l}</option>`).join('');
+    depthSelect.classList.toggle('active', cur > 0);
+  }
+  if(depthSelect) depthSelect.addEventListener('change', ()=>{
+    if(!currentMeta) return;
+    Store.setDepth(currentMeta.id, Number(depthSelect.value));
+    loadRepo(currentMeta.id, {background:false});
+  });
   if(centerSelect) centerSelect.addEventListener('change', ()=>{
     if(!currentMeta) return;
     Store.setTrunk(currentMeta.id, centerSelect.value);
@@ -3325,6 +3505,137 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     popup.classList.add('show');
     popupBackdrop.classList.add('show');
   }
+
+  // =====================================================================
+  // WHAT'S GOING OUT — the commits on one branch that are not yet on another,
+  // grouped by the pull request that brought them in. Worked out from the
+  // history already loaded; no extra requests. The usual use: the branch the
+  // team raises pull requests against, and the default branch it ships to.
+  // =====================================================================
+  const outPopup = document.getElementById('outPopup');
+  const outBody = document.getElementById('outBody');
+  const outFrom = document.getElementById('outFrom');
+  const outInto = document.getElementById('outInto');
+  const outBtn = document.getElementById('outBtn');
+  let outNotes = '';
+
+  function outgoing(fromName, intoName){
+    const by = {}; DATA.full.nodes.forEach(n=> by[n.sha] = n);
+    const anc = (sha)=>{
+      const seen = new Set(), st = [sha];
+      while(st.length){ const x = st.pop(); if(seen.has(x) || !by[x]) continue; seen.add(x); by[x].parents.forEach(q=> st.push(q)); }
+      return seen;
+    };
+    const A = anc(byName[fromName].tip), B = anc(byName[intoName].tip);
+    const S = new Set([...A].filter(x=> !B.has(x)));
+    const behind = [...B].filter(x=> !A.has(x) && !by[x].placeholder).length;
+    // newest pull request first; each takes the commits its merge brought in
+    const used = new Set(), groups = [];
+    [...S].map(x=> by[x]).filter(n=> n.pr).sort((a,b)=> new Date(b.date) - new Date(a.date)).forEach(L=>{
+      if(used.has(L.sha)) return;
+      used.add(L.sha);
+      const members = [L];
+      if(L.parents.length > 1){
+        const first = anc(L.parents[0]), st = [L.parents[1]];
+        while(st.length){
+          const x = st.pop();
+          if(!by[x] || first.has(x) || !S.has(x) || used.has(x)) continue;
+          used.add(x); members.push(by[x]); by[x].parents.forEach(q=> st.push(q));
+        }
+      }
+      groups.push({ pr: L.pr, landed: L, members: members.filter(m=> !m.placeholder) });
+    });
+    const rest = [...S].filter(x=> !used.has(x)).map(x=> by[x]).filter(n=> !n.placeholder).sort((a,b)=> new Date(b.date) - new Date(a.date));
+    const people = new Set(), all = [];
+    groups.forEach(g=> g.members.forEach(m=> all.push(m)));
+    rest.forEach(m=> all.push(m));
+    all.forEach(m=> people.add(m.author));
+    const oldest = all.length ? all.reduce((a,m)=> new Date(m.date) < new Date(a) ? m.date : a, all[0].date) : null;
+    return { groups, merges: rest.filter(n=> n.is_merge), direct: rest.filter(n=> !n.is_merge), behind, commits: all.length, people: people.size, oldest };
+  }
+
+  function plural(n, one, many){ return `${n} ${n === 1 ? one : (many || one + 's')}`; }
+  function commitLine(c){
+    return `<div class="outCommit"><span class="mono">${escapeHtml(c.short)}</span><span>${escapeHtml(c.subject)}</span><span class="who">${escapeHtml(c.author)}</span></div>`;
+  }
+
+  function renderOutgoing(){
+    const from = outFrom.value, into = outInto.value;
+    if(!from || !into || !byName[from] || !byName[into]){
+      outBody.innerHTML = '<div class="pnote">Pick the branch the work is on, and the branch it is going into.</div>';
+      outNotes = ''; return;
+    }
+    if(from === into){ outBody.innerHTML = '<div class="pnote">Pick two different branches.</div>'; outNotes = ''; return; }
+    const o = outgoing(from, into);
+    document.getElementById('outMeta').textContent = `${from} \u2192 ${into}`;
+    let h = '';
+    if(o.behind) h += `<div class="outWarn">${escapeHtml(into)} also has ${plural(o.behind, 'commit')} that ${escapeHtml(from)} does not (a hotfix, perhaps). If ${escapeHtml(into)} is where you ship, bring ${o.behind === 1 ? 'it' : 'them'} into ${escapeHtml(from)} first.</div>`;
+    if(!o.commits && !o.merges.length){
+      h += `<div class="outGood">Nothing: everything on ${escapeHtml(from)} is already in ${escapeHtml(into)}.</div>`;
+      outBody.innerHTML = h; outNotes = ''; return;
+    }
+    h += `<div class="outSum">${plural(o.groups.length, 'pull request')} &middot; ${plural(o.commits, 'commit')} &middot; ${plural(o.people, 'person', 'people')}${o.oldest ? ' &middot; oldest ' + relTime(o.oldest) : ''}</div>`;
+    const notes = [`What's going out: ${from} -> ${into} (${plural(o.groups.length, 'pull request')}, ${plural(o.commits, 'commit')})`, ''];
+    o.groups.forEach(g=>{
+      const who = g.pr.user || g.landed.author;
+      h += `<div class="outGroup">
+        <div class="outHead"><a class="prChip" href="${escapeHtml(g.pr.url || '#')}" target="_blank" rel="noopener">#${g.pr.number}</a><span class="outTitle">${escapeHtml(g.pr.title || g.landed.subject)}</span><button class="linkBtn" data-locate="${g.landed.sha}">show in history</button></div>
+        <div class="outMeta">${escapeHtml(who)} &middot; merged ${relTime(g.pr.at || g.landed.date)}${g.pr.head ? ' &middot; ' + escapeHtml(g.pr.head) : ''}</div>
+        <details><summary>${plural(g.members.length, 'commit')}</summary>${g.members.map(commitLine).join('')}</details>
+      </div>`;
+      notes.push(`- ${g.pr.title || g.landed.subject} (#${g.pr.number}), ${who}`);
+    });
+    if(o.direct.length){
+      h += `<div class="outHead2">Committed directly &middot; ${o.direct.length}</div><div class="outGroup"><details${o.direct.length <= 8 ? ' open' : ''}><summary>${plural(o.direct.length, 'commit')} that did not come through a pull request</summary>${o.direct.map(commitLine).join('')}</details></div>`;
+      notes.push('', 'Committed directly:');
+      o.direct.forEach(c=> notes.push(`- ${c.subject}, ${c.author}`));
+    }
+    if(o.merges.length){
+      h += `<div class="outHead2">Merges and syncs &middot; ${o.merges.length}</div><div class="outGroup"><details><summary>${plural(o.merges.length, 'merge commit')} with no pull request</summary>${o.merges.map(commitLine).join('')}</details></div>`;
+    }
+    outBody.innerHTML = h;
+    outNotes = notes.join('\n');
+  }
+
+  function fillOutPickers(){
+    const live = DATA.branches.filter(b=> !b.deleted).map(b=> b.name).sort((a,b)=> a.localeCompare(b));
+    const repoDef = DATA.repo_default_branch || DATA.default_branch, trunk = DATA.default_branch;
+    // by default: the branch the work is centered on, going into the repo default;
+    // when those are the same branch, the branch pull requests go to
+    const target = (DATA.integration || []).map(s=> s.name).find(n=> byName[n] && n !== repoDef) || '';
+    const from = trunk !== repoDef ? trunk : target, into = repoDef;
+    const opts = sel=> '<option value="">Pick a branch</option>' + live.map(n=> `<option value="${escapeHtml(n)}"${n === sel ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
+    outFrom.innerHTML = opts(from); outInto.innerHTML = opts(into);
+  }
+  function openOutgoing(){
+    if(!DATA) return;
+    fillOutPickers();
+    document.getElementById('outCopied').textContent = '';
+    renderOutgoing();
+    outPopup.classList.add('show'); popupBackdrop.classList.add('show');
+  }
+  function closeOutgoing(){ outPopup.classList.remove('show'); popupBackdrop.classList.remove('show'); }
+  outBtn.addEventListener('click', openOutgoing);
+  document.getElementById('closeOut').addEventListener('click', closeOutgoing);
+  outFrom.addEventListener('change', renderOutgoing);
+  outInto.addEventListener('change', renderOutgoing);
+  outBody.addEventListener('click', ev=>{
+    const b = ev.target.closest('[data-locate]');
+    if(b){ closeOutgoing(); locateInGraph(b.dataset.locate); }
+  });
+  document.getElementById('outCopy').addEventListener('click', async ()=>{
+    const note = document.getElementById('outCopied');
+    if(!outNotes){ note.textContent = 'Nothing to copy'; return; }
+    try{ await navigator.clipboard.writeText(outNotes); note.textContent = 'Copied'; return; }catch(e){}
+    // older or non-secure pages: copy through a hidden text box
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = outNotes; ta.style.cssText = 'position:fixed; opacity:0; top:0; left:0;';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy'); ta.remove();
+      note.textContent = ok ? 'Copied' : 'Could not copy here';
+    }catch(e){ note.textContent = 'Could not copy here'; }
+  });
 
   // ---- boot ----
   populateRepoSelect();

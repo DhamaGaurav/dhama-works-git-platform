@@ -20,6 +20,12 @@ Your tokens and repos are stored only in that browser's `localStorage`. Nothing 
 
 A GitHub token with **Pull requests: Read-only** (Azure DevOps: **Code: Read**, which covers pull requests) unlocks the two features below. Without it the map still loads from branches alone.
 
+## What's going out, and loading only what is new
+
+- **What's going out.** The button above the graph lists everything on one branch that is not yet on another, grouped by pull request (with the commits inside each, anything committed directly, and merge/sync commits kept apart). By default it is the center branch going into the repo default, or the branch pull requests go to when those are the same. It warns when the other branch has commits yours lacks (a hotfix). *Copy as release notes* puts a plain list on the clipboard. It reads only what is already loaded.
+- **Loading only what is new.** Downloaded commits are kept per repo in the browser (IndexedDB). A refresh asks only about branches that moved, so a repo that has not changed costs no commit requests, and one new commit costs one. Commits no branch can reach any more (after a force-push or a deleted branch) are dropped. Shift-click Refresh to forget them and download everything again.
+- **History limit.** The *History* menu loads only the last 30 days, 90 days, 6 or 12 months. It is faster on big repositories. Branches whose last commit is older still appear, but their commit counts only cover what is loaded. Choosing *all* again fetches the older history.
+
 ## When branches are deleted, or pull requests go to a non-default branch
 
 Pull requests remember things the branch list forgets, so the map reads the 200 most recently updated ones on every load.
