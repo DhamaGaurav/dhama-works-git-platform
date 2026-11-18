@@ -18,7 +18,16 @@ A self-contained, single-file HTML tool that pulls a **GitHub** or **Azure DevOp
 
 Your tokens and repos are stored only in that browser's `localStorage`. Nothing is sent anywhere except directly to GitHub's API or to your Azure DevOps server.
 
-Optional: a GitHub token with **Pull requests: Read-only** adds pull request titles in Person details; everything works without it.
+A GitHub token with **Pull requests: Read-only** (Azure DevOps: **Code: Read**, which covers pull requests) unlocks the two features below. Without it the map still loads from branches alone.
+
+## When branches are deleted, or pull requests go to a non-default branch
+
+Pull requests remember things the branch list forgets, so the map reads the 200 most recently updated ones on every load.
+
+- **Deleted after merge.** A branch deleted after its pull request merged is rebuilt from that pull request (its name and last commit) and listed under *Deleted after merge*. Its commits appear in the graph with a dashed tag. Up to the 50 newest are shown.
+- **Pull requests go here.** If people raise pull requests against a branch other than the default (`develop`, `release/x`), that branch is pinned at the top of the list with its open, merged and closed counts, and its tag is filled in the graph.
+- **Measure against.** The graph's main line, "merged" and "ahead" all need a reference branch. It is the default branch unless most pull requests target another live branch, in which case that one is picked for you and the header says so. Override it with the *Measure against* menu above the graph. The choice is remembered per repo.
+- **Squash and rebase merges.** The pull request's merge commit is labelled "Pull request #N merged into ..." and stays visible in the condensed view, so a squash workflow still shows one step per pull request.
 
 ## Features
 

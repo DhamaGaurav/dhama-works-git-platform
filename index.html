@@ -300,6 +300,24 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .badge.local{background:var(--surface-2); color:var(--text-3); border:1px dashed var(--border);}
 .badge.rec-safe{background:var(--good-soft); color:var(--good);}
 .badge.rec-needs{background:var(--warn-soft); color:var(--warn);}
+/* pull-request awareness: branches pull requests target, and branches deleted after merge */
+.badge.integ{background:var(--accent); color:var(--on-accent);}
+.badge.gone{background:transparent; color:var(--text-3); border:1px dashed var(--border);}
+.badge.pr{background:var(--surface-2); color:var(--text-2);}
+.badge.pr.open{background:var(--accent-soft); color:var(--accent);}
+.bcard.integ{border-left:3px solid var(--accent);}
+.tierdot.gone{background:transparent; box-shadow:inset 0 0 0 1.5px var(--text-3);}
+.groupHead.integ{color:var(--accent);}
+.subtle{color:var(--text-3);}
+.tippill.integ{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
+.tippill.integ:hover{color:var(--on-accent); filter:brightness(1.08);}
+.tippill.gone{border-style:dashed; font-style:italic; color:var(--text-3);}
+.prChip{
+  font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft);
+  padding:1px 7px; border-radius:999px; text-decoration:none; max-width:100%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.prChip:hover{text-decoration:underline;}
 
 /* graph */
 #graphScroll{flex:1; min-height:0; overflow-y:auto; overflow-x:auto; position:relative;}
@@ -620,6 +638,7 @@ footer.note .mono{color:var(--text-3);}
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
         <select class="branchHiSelect" id="branchHighlightSelect" title="Highlight a branch's path, dim everything else"><option value="">Highlight branch&hellip;</option></select>
+        <select class="branchHiSelect" id="trunkSelect" title="The branch the main line, &quot;merged&quot; and &quot;ahead&quot; are measured against. Pick the branch your team raises pull requests against if it is not the default."><option>Measure against&hellip;</option></select>
         <span>click a branch to see its history &middot; click a dot for that commit</span>
         <span class="laneLegend">
           <span class="llGroup"><span class="llDot"></span>commit</span>
@@ -629,6 +648,7 @@ footer.note .mono{color:var(--text-3);}
             = lanes, colors repeat &mdash; not one fixed branch
           </span>
           <span class="llGroup">look for the <b id="llDefaultTag">main</b> tag to find your default branch</span>
+          <span class="llGroup" id="llExtra" style="display:none;"></span>
         </span>
       </div>
       <div class="authorFilterRow" id="authorFilterRow"></div>
@@ -795,6 +815,10 @@ const Store = (function(){
     },
     getSettingsProv(){ return safeGet('ghp_settings_prov') || ''; },   // which Settings tab was last open
     setSettingsProv(p){ return safeSet('ghp_settings_prov', p); },
+    // Which branch the graph and "merged" status are measured against, per repo.
+    // '' = automatic, '__default' = the repo's default branch, else a branch name.
+    getTrunk(repo){ return safeGet('ghp_trunk_' + repo) || ''; },
+    setTrunk(repo, v){ return v ? safeSet('ghp_trunk_' + repo, v) : (safeRemove('ghp_trunk_' + repo), true); },
     getLastRepo(){ return safeGet(K_LAST) || ''; },
     setLastRepo(r){ return safeSet(K_LAST, r); },
     getCache(repo){
@@ -881,12 +905,10 @@ const GitHub = (function(){
   // by sha, the browser-side equivalent of `git log --all`. Each GitHub
   // commit object already carries parent shas, so no extra graph-walking
   // calls are needed beyond pagination.
-  async function getAllCommits(owner, repo, branchTips, token, onProgress){
+  async function getAllCommits(owner, repo, branchTips, token, onProgress, softTips){
     const seen = new Map(); // sha -> commit dict
     let branchIdx = 0;
-    for(const tip of branchTips){
-      branchIdx++;
-      if(onProgress) onProgress(`Fetching commit history (${branchIdx}/${branchTips.length} branches)…`);
+    async function walk(tip){
       let path = `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(tip)}&per_page=100`;
       let guard = 0;
       let hitKnown = false;
@@ -919,6 +941,19 @@ const GitHub = (function(){
         path = parseNextLink(res.headers.get('link'));
       }
     }
+    for(const tip of branchTips){
+      branchIdx++;
+      if(onProgress) onProgress(`Fetching commit history (${branchIdx}/${branchTips.length} branches)…`);
+      await walk(tip);
+    }
+    // Tips of branches that were deleted after their pull request merged. These
+    // are best-effort: if one can't be read, the rest of the graph still loads.
+    let soft = 0;
+    for(const tip of (softTips || [])){
+      soft++;
+      if(onProgress) onProgress(`Fetching branches deleted after merge (${soft}/${softTips.length})…`);
+      try{ await walk(tip); }catch(e){ if(e && e.status === 403) break; }
+    }
     return [...seen.values()];
   }
 
@@ -944,18 +979,29 @@ const GitHub = (function(){
 
   // On-request only (see Person details): one paginated call for all pull
   // requests, and one call per commit for the files it changed.
-  async function getPulls(owner, repo, token){
-    let path = `/repos/${owner}/${repo}/pulls?state=all&per_page=100`;
+  // Also read when the graph loads (maxPages: 2): it is how branches deleted
+  // after merge are found, and how branches that pull requests are raised
+  // against (an integration branch other than the default) are spotted.
+  async function getPulls(owner, repo, token, opts){
+    const maxPages = (opts && opts.maxPages) || 5;
+    let path = `/repos/${owner}/${repo}/pulls?state=all&sort=updated&direction=desc&per_page=100`;
     const out = [];
     let guard = 0;
-    while(path && guard < 5){
+    while(path && guard < maxPages){
       guard++;
       const res = await req(path, token);
       const json = await res.json();
-      for(const p of json) out.push({
-        number: p.number, title: p.title, url: p.html_url, branch: p.head && p.head.ref,
-        state: p.merged_at ? 'merged' : p.state, user: p.user && p.user.login,
-      });
+      for(const p of json){
+        const fork = !!(p.head && p.head.repo && p.base && p.base.repo && p.head.repo.full_name !== p.base.repo.full_name);
+        out.push({
+          number: p.number, title: p.title, url: p.html_url, branch: p.head && p.head.ref,
+          base: p.base && p.base.ref, headSha: p.head && p.head.sha,
+          mergeSha: p.merged_at ? p.merge_commit_sha : null,
+          fork, forkOwner: fork && p.head.user ? p.head.user.login : '',
+          mergedAt: p.merged_at, closedAt: p.closed_at,
+          state: p.merged_at ? 'merged' : p.state, user: p.user && p.user.login,
+        });
+      }
       path = parseNextLink(res.headers.get('link'));
     }
     return out;
@@ -1110,13 +1156,11 @@ const Azure = (function(){
 
   // Commit history reachable from each branch tip, merged and deduped by
   // sha. Each commit already carries its parent ids, so only paging is needed.
-  async function getAllCommits(r, branchTips, token, onProgress){
+  async function getAllCommits(r, branchTips, token, onProgress, softTips){
     const seen = new Map();
     const PAGE = 100;
     let idx = 0;
-    for(const tip of branchTips){
-      idx++;
-      if(onProgress) onProgress(`Fetching commit history (${idx}/${branchTips.length} branches)…`);
+    async function walk(tip){
       let skip = 0, guard = 0, hitKnown = false;
       while(guard < 20 && !hitKnown){
         guard++;
@@ -1141,18 +1185,37 @@ const Azure = (function(){
         skip += PAGE;
       }
     }
+    for(const tip of branchTips){
+      idx++;
+      if(onProgress) onProgress(`Fetching commit history (${idx}/${branchTips.length} branches)…`);
+      await walk(tip);
+    }
+    // Tips of branches deleted after their pull request completed: best-effort.
+    let soft = 0;
+    for(const tip of (softTips || [])){
+      soft++;
+      if(onProgress) onProgress(`Fetching branches deleted after merge (${soft}/${softTips.length})…`);
+      try{ await walk(tip); }catch(e){ if(e && (e.status === 401 || e.status === 403)) break; }
+    }
     return [...seen.values()];
   }
 
-  // On-request only (see Person details).
-  async function getPulls(r, token){
+  // Also read when the graph loads (maxPages: 2), to find branches deleted
+  // after merge and the branches pull requests are raised against.
+  async function getPulls(r, token, opts){
     const out = [];
-    for(let page = 0; page < 5; page++){
+    const maxPages = (opts && opts.maxPages) || 5;
+    for(let page = 0; page < maxPages; page++){
       const url = `${repoApi(r)}/pullrequests?searchCriteria.status=all&$top=100&$skip=${page*100}`;
       const json = await (await req(url, token)).json();
       const list = json.value || [];
       for(const p of list) out.push({
         number: p.pullRequestId, title: p.title, branch: stripHeads(p.sourceRefName),
+        base: stripHeads(p.targetRefName),
+        headSha: p.lastMergeSourceCommit && p.lastMergeSourceCommit.commitId,
+        mergeSha: p.status === 'completed' && p.lastMergeCommit ? p.lastMergeCommit.commitId : null,
+        fork: !!p.forkSource, forkOwner: '',
+        mergedAt: p.status === 'completed' ? p.closedDate : null, closedAt: p.closedDate || null,
         url: `${r.baseUrl}/${encodeURIComponent(r.project)}/_git/${encodeURIComponent(r.repo)}/pullrequest/${p.pullRequestId}`,
         state: p.status === 'completed' ? 'merged' : (p.status === 'active' ? 'open' : p.status),
         user: p.createdBy && p.createdBy.displayName,
@@ -1192,8 +1255,8 @@ const Providers = (function(){
         token: tk,
         getRepoInfo: () => Azure.getRepoInfo(ref, tk()),
         getAllBranches: () => Azure.getAllBranches(ref, tk()),
-        getAllCommits: (tips, onProgress) => Azure.getAllCommits(ref, tips, tk(), onProgress),
-        getPulls: () => Azure.getPulls(ref, tk()),
+        getAllCommits: (tips, onProgress, softTips) => Azure.getAllCommits(ref, tips, tk(), onProgress, softTips),
+        getPulls: opts => Azure.getPulls(ref, tk(), opts),
         getCommitFiles: sha => Azure.getCommitFiles(ref, sha, tk()),
       };
     }
@@ -1206,8 +1269,8 @@ const Providers = (function(){
       token: tk,
       getRepoInfo: () => GitHub.getRepoInfo(owner, repo, tk()),
       getAllBranches: () => GitHub.getAllBranches(owner, repo, tk()),
-      getAllCommits: (tips, onProgress) => GitHub.getAllCommits(owner, repo, tips, tk(), onProgress),
-      getPulls: () => GitHub.getPulls(owner, repo, tk()),
+      getAllCommits: (tips, onProgress, softTips) => GitHub.getAllCommits(owner, repo, tips, tk(), onProgress, softTips),
+      getPulls: opts => GitHub.getPulls(owner, repo, tk(), opts),
       getCommitFiles: sha => GitHub.getCommitFiles(owner, repo, sha, tk()),
     };
   }
@@ -1216,13 +1279,72 @@ const Providers = (function(){
 // AZURE-SUPPORT (end)
 
 // =====================================================================
+// PULL REQUEST AWARENESS — what a plain branch list cannot show:
+//  1. Branches deleted after their pull request merged. They are gone from
+//     the branch list, but the pull request still remembers the branch name
+//     and its last commit, so they are brought back as "ghost" branches.
+//  2. Integration branches: when people raise pull requests against a branch
+//     other than the default (develop, release/x ...), that branch is the
+//     real trunk of the team's work. Measuring everything against the
+//     default branch makes all of it look unmerged.
+// =====================================================================
+const MAX_GHOSTS = 50;   // newest merged pull requests whose branch is gone
+const PR_PAGES = 2;      // 200 most recently updated pull requests per load
+const prLite = p => ({ number:p.number, title:p.title, url:p.url, base:p.base, head:p.branch,
+  state:p.state, user:p.user, at:p.mergedAt || p.closedAt || null });
+
+function ghostBranchesFrom(liveBranches, pulls, cap){
+  const live = new Set(liveBranches.map(b => b.name));
+  const taken = new Set(), out = [];
+  const merged = pulls.filter(p => p.state === 'merged' && p.headSha && p.branch)
+    .sort((a,b) => new Date(b.mergedAt || 0) - new Date(a.mergedAt || 0));
+  for(const p of merged){
+    const name = p.fork ? ((p.forkOwner || 'fork') + ':' + p.branch) : p.branch;
+    if(live.has(name) || taken.has(name)) continue; // a live branch with that name wins
+    taken.add(name);
+    out.push({ name, sha:p.headSha, deleted:true, pr:prLite(p) });
+    if(out.length >= cap) break;
+  }
+  return out;
+}
+
+// How many pull requests were raised against each branch, newest data first.
+function baseStatsFrom(pulls){
+  const by = {};
+  pulls.forEach(p => {
+    if(!p.base) return;
+    const s = (by[p.base] ||= { name:p.base, open:0, merged:0, closed:0, total:0 });
+    if(p.state === 'open') s.open++; else if(p.state === 'merged') s.merged++; else s.closed++;
+    s.total++;
+  });
+  return Object.values(by).sort((a,b) => b.total - a.total);
+}
+
+// pref: '' = automatic, '__default', or a branch name the user picked.
+function pickTrunk(baseStats, liveNames, repoDefault, pref){
+  if(pref === '__default') return repoDefault;
+  if(pref && liveNames.has(pref)) return pref;
+  const top = baseStats[0];
+  const intoDefault = (baseStats.find(s => s.name === repoDefault) || { total:0 }).total;
+  if(top && top.name !== repoDefault && liveNames.has(top.name) && top.total >= 2 && top.total > intoDefault) return top.name;
+  return repoDefault;
+}
+
+// =====================================================================
 // GRAPH PIPELINE — ported from build_graph.py (this session's earlier,
 // debugged Python pipeline). Kept as close to that logic as possible,
 // including its two fixed bugs (most-specific-branch commit ownership,
 // and the hidden-commit-count cache being a queue, not overwrite-by-key)
 // so this doesn't reintroduce either one.
 // =====================================================================
-function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
+// defaultBranchName is the branch everything is measured against (the "trunk").
+// It is the repo's default branch unless pull requests mostly target another
+// branch, or the user picked one. opts: { pulls, repoDefault, baseStats, auto, pullsError }
+function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts){
+  opts = opts || {};
+  const pulls = opts.pulls || [];
+  const repoDefault = opts.repoDefault || defaultBranchName;
+  const baseStats = opts.baseStats || baseStatsFrom(pulls);
   const now = new Date(nowISO);
   const commits = {};
   commitsRaw.forEach(c => { commits[c.sha] = c; });
@@ -1236,9 +1358,30 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     .map(b => ({
       name: b.name, tip: b.sha,
       date: commits[b.sha].date, author: commits[b.sha].author,
+      deleted: !!b.deleted, pr: b.pr || null,
     }));
   const byName = {};
   uniqueBranches.forEach(b => { byName[b.name] = b; });
+
+  // Pull requests, indexed two ways: by the commit they landed as (merge or
+  // squash commit on the target branch) and by the branch they came from.
+  const prBySha = {};
+  const prByHead = {};
+  pulls.forEach(p => {
+    if(p.mergeSha && commits[p.mergeSha] && !(p.mergeSha in prBySha)) prBySha[p.mergeSha] = prLite(p);
+    if(p.branch && !p.fork && (!prByHead[p.branch] || p.state === 'open' || (prByHead[p.branch].state !== 'open' && p.number > prByHead[p.branch].number))) prByHead[p.branch] = p;
+  });
+  const statByBase = {}; baseStats.forEach(s => { statByBase[s.name] = s; });
+  uniqueBranches.forEach(b => {
+    if(!b.pr){
+      const p = prByHead[b.name];
+      // an old, finished pull request from a reused branch name says nothing
+      // about the branch as it is now, so only attach open ones or ones for this exact tip
+      if(p && (p.state === 'open' || p.headSha === b.tip)) b.pr = prLite(p);
+    }
+    // a branch other than the repo default that pull requests are raised against
+    if(b.name !== repoDefault && statByBase[b.name]) b.integration = statByBase[b.name];
+  });
 
   const mainBranch = byName[defaultBranchName];
   const mainTip = mainBranch ? mainBranch.tip : (uniqueBranches[0] && uniqueBranches[0].tip);
@@ -1277,11 +1420,17 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     else if(days < 21) tier = 'aging';
     else tier = 'stale';
     b.tier = tier;
-    if(b.merged_into_main && (tier==='aging'||tier==='stale') && b.name !== defaultBranchName){
+    const protectedName = b.name === defaultBranchName || b.name === repoDefault || !!b.integration;
+    if(b.merged_into_main && (tier==='aging'||tier==='stale') && !protectedName){
       b.recommendation = 'safe-to-delete';
-    } else if(!b.merged_into_main && b.ahead_of_main>0 && (tier==='aging'||tier==='stale')){
+    } else if(!b.merged_into_main && b.ahead_of_main>0 && (tier==='aging'||tier==='stale') && !protectedName){
       b.recommendation = 'needs-decision';
     } else {
+      b.recommendation = null;
+    }
+    if(b.deleted){
+      // its pull request merged and the branch is gone: nothing left to clean up
+      b.merged_into_main = true;
       b.recommendation = null;
     }
   }
@@ -1439,6 +1588,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       }
       return { kind:'merge', text:`${incoming} merged into ${target}`, note:explainerFor('merge') };
     }
+    const pr = prBySha[sha];
+    if(pr){
+      // a squash or rebase merge: the branch's commits were folded into this
+      // one commit, so the graph has no second-parent line to show it by
+      return { kind:'merge', text:`Pull request #${pr.number} merged into ${pr.base || defaultBranchName}`,
+        note:'squash or rebase merge — the branch\'s commits were combined into this one commit, so there is no line back to the branch.' };
+    }
     if(c.subject.startsWith('Revert ')){
       return { kind:'revert', text:c.subject, note:explainerFor('revert') };
     }
@@ -1516,6 +1672,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         is_merge: c.parents.length > 1,
         refs: refsBySha[sha] || [],
         event: eventBySha[sha] || null,
+        pr: prBySha[sha] || null,
         branch_start: branchStartBySha[sha] || null,
       };
     });
@@ -1528,7 +1685,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   const keepSet = new Set(order.length ? [order[order.length-1]] : []);
   order.forEach(sha=>{
     const c = commits[sha];
-    if(c.parents.length > 1 || (refsBySha[sha] && refsBySha[sha].length)) keepSet.add(sha);
+    // pull request landing commits stay too, so a squash-merge workflow still
+    // shows one step per pull request instead of collapsing to just the tips
+    if(c.parents.length > 1 || prBySha[sha] || (refsBySha[sha] && refsBySha[sha].length)) keepSet.add(sha);
   });
 
   const hiddenCountQueue = {}; // key `${sha}|${target}` -> [steps, steps, ...]
@@ -1569,7 +1728,12 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     branches: uniqueBranches,
     full, condensed,
     main_tip: mainTip,
-    default_branch: defaultBranchName,
+    default_branch: defaultBranchName,       // the trunk: what everything is measured against
+    repo_default_branch: repoDefault,        // the repo's own default branch
+    trunk_auto: !!opts.auto,                 // true when the trunk was picked for the user
+    integration: baseStats.filter(s => s.name !== repoDefault),
+    pull_count: pulls.length,
+    pulls_error: opts.pullsError || '',
     owner_by_sha: ownerBySha,
     now: nowISO,
   };
@@ -1589,7 +1753,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   let byName = {};
   let authorFilter = new Set(); // empty = everyone shown
   let branchQuery = '';
-  let showAllOpen = false, showMerged = false;
+  let showAllOpen = false, showMerged = false, showGone = false;
   const OPEN_PAGE = 8;
 
   const rowsEl = document.getElementById('rows');
@@ -1997,6 +2161,20 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     svg.style.display = '';
   }
 
+  // The last fetch, kept in memory so the "Measure against" choice can rebuild
+  // the graph without fetching again. Null when the page is showing cached data.
+  let lastRaw = null;
+  function buildFromRaw(raw, nowISO){
+    const stats = baseStatsFrom(raw.pulls);
+    const live = new Set(raw.branches.filter(b=> !b.deleted).map(b=> b.name));
+    const pref = Store.getTrunk(raw.id);
+    const trunk = pickTrunk(stats, live, raw.info.defaultBranch, pref);
+    return buildGraphData(raw.branches, raw.commits, trunk, nowISO, {
+      pulls: raw.pulls, repoDefault: raw.info.defaultBranch, baseStats: stats,
+      auto: !pref && trunk !== raw.info.defaultBranch, pullsError: raw.pullsError,
+    });
+  }
+
   async function loadRepo(fullName, opts){
     opts = opts || {};
     const cl = Providers.client(fullName);
@@ -2025,13 +2203,20 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     }
     try{
       const info = await cl.getRepoInfo();
-      const branches = await cl.getAllBranches();
-      const commits = await cl.getAllCommits(branches.map(b=>b.sha), (msg)=>{
+      const liveBranches = await cl.getAllBranches();
+      // Pull requests are optional: without the permission the graph still loads,
+      // it just can't show branches deleted after merge or integration branches.
+      let pulls = [], pullsError = '';
+      try{ pulls = await cl.getPulls({ maxPages: PR_PAGES }); }
+      catch(err){ pullsError = (err.status === 401 || err.status === 403 || err.status === 404) ? cl.pullsHint : (err.message || String(err)); }
+      const ghosts = ghostBranchesFrom(liveBranches, pulls, MAX_GHOSTS);
+      const commits = await cl.getAllCommits(liveBranches.map(b=>b.sha), (msg)=>{
         const d = document.getElementById('loadingDetail');
         if(d) d.textContent = msg;
-      });
+      }, ghosts.map(g=>g.sha));
+      lastRaw = { id: fullName, info, branches: liveBranches.concat(ghosts), commits, pulls, pullsError };
       const nowISO = new Date().toISOString();
-      const built = buildGraphData(branches, commits, info.defaultBranch, nowISO);
+      const built = buildFromRaw(lastRaw, nowISO);
       Store.setCache(fullName, built);
       now = new Date();
       applyData(built, meta, nowISO);
@@ -2069,20 +2254,36 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     closePerson();
     clearCenterState();
     activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set(); highlightPathSet = null;
-    branchQuery = ''; showAllOpen = false; showMerged = false;
+    branchQuery = ''; showAllOpen = false; showMerged = false; showGone = false;
     const searchEl = document.getElementById('branchSearch'); if(searchEl) searchEl.value = '';
+    // must be set before the first render: the graph's clickable lines look branches up by name
+    byName = {};
+    DATA.branches.forEach(b=> byName[b.name] = b);
 
     const pageTitleEl = document.getElementById('pageTitle');
     pageTitleEl.textContent = meta.repo + ' Branch Map';
     pageTitleEl.title = pageTitleEl.textContent;
-    const subtitleText = `${DATA.branches.length} branches across ${meta.fullName} · snapshot ${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}`;
+    const liveCount = DATA.branches.filter(b=> !b.deleted).length;
+    const goneCount = DATA.branches.length - liveCount;
+    const goneTxt = goneCount ? ` (+${goneCount} deleted after merge)` : '';
+    const trunkNote = DATA.trunk_auto ? ` · measured against ${DATA.default_branch} (most pull requests go there)` : '';
+    const subtitleText = `${liveCount} branches${goneTxt} across ${meta.fullName}${trunkNote} · snapshot ${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}`;
     const subtitleEl = document.getElementById('subtitle');
     subtitleEl.innerHTML =
-      `${DATA.branches.length} branches across <span class="mono">${meta.fullName}</span> &middot; snapshot <span class="mono">${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}</span>`;
+      `${liveCount} branches${goneTxt} across <span class="mono">${escapeHtml(meta.fullName)}</span>${trunkNote ? ` &middot; measured against <b class="mono">${escapeHtml(DATA.default_branch)}</b> <span class="subtle">(most pull requests go there)</span>` : ''} &middot; snapshot <span class="mono">${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}</span>`;
     subtitleEl.title = subtitleText;
-    document.getElementById('branchCount').textContent = DATA.branches.length;
+    document.getElementById('branchCount').textContent = liveCount;
     const llDefaultTag = document.getElementById('llDefaultTag');
     if(llDefaultTag) llDefaultTag.textContent = DATA.default_branch || 'main';
+    const llExtra = document.getElementById('llExtra');
+    if(llExtra){
+      const bits = [];
+      if((DATA.integration || []).some(s=> byName[s.name])) bits.push('<b>filled tag</b> = branch that pull requests are raised against');
+      if(goneCount) bits.push('<b>dashed tag</b> = deleted after merge');
+      llExtra.innerHTML = bits.join(' &middot; ');
+      llExtra.style.display = bits.length ? '' : 'none';
+    }
+    renderTrunkSelect();
     document.getElementById('footerNote').innerHTML =
       `Live from ${meta.service || 'GitHub'} &middot; <span class="mono">${escapeHtml(meta.fullName)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`;
 
@@ -2095,15 +2296,45 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     renderBranchHighlightSelect();
     renderGraph('condensed');
     settle();
-
-    byName = {};
-    DATA.branches.forEach(b=> byName[b.name] = b);
   }
+
+  // "Measure against": the branch the graph's main line, "merged" and "ahead"
+  // are worked out from. Automatic picks the branch most pull requests target.
+  const trunkSelect = document.getElementById('trunkSelect');
+  function renderTrunkSelect(){
+    if(!trunkSelect) return;
+    const repoDef = DATA.repo_default_branch || DATA.default_branch;
+    const live = DATA.branches.filter(b=> !b.deleted);
+    const targets = live.filter(b=> b.integration && b.name !== repoDef).map(b=> b.name);
+    const others = live.map(b=> b.name).filter(n=> n !== repoDef && !targets.includes(n)).sort((a,b)=> a.localeCompare(b));
+    const opt = (v, label, sel)=> `<option value="${escapeHtml(v)}"${sel ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+    const pref = currentMeta ? Store.getTrunk(currentMeta.id) : '';
+    const chosen = pref === '__default' ? '__default' : (pref && live.some(b=> b.name === pref) ? pref : (DATA.trunk_auto ? DATA.default_branch : '__default'));
+    let h = opt('__default', `Measure against: ${repoDef} (default)`, chosen === '__default');
+    if(targets.length) h += `<optgroup label="Pull requests go here">${targets.map(n=> opt(n, n, chosen === n)).join('')}</optgroup>`;
+    if(others.length) h += `<optgroup label="Other branches">${others.map(n=> opt(n, n, chosen === n)).join('')}</optgroup>`;
+    trunkSelect.innerHTML = h;
+    trunkSelect.classList.toggle('active', chosen !== '__default');
+  }
+  if(trunkSelect) trunkSelect.addEventListener('change', ()=>{
+    if(!currentMeta) return;
+    Store.setTrunk(currentMeta.id, trunkSelect.value);
+    if(lastRaw && lastRaw.id === currentMeta.id){
+      const nowISO = new Date().toISOString();
+      const built = buildFromRaw(lastRaw, nowISO);
+      Store.setCache(currentMeta.id, built);
+      now = new Date();
+      applyData(built, currentMeta, nowISO);
+    } else {
+      loadRepo(currentMeta.id, {background:false, forceFresh:true});
+    }
+  });
 
   function renderStats(){
     const tiers = {active:0, recent:0, aging:0, stale:0};
     let cleanup = 0;
     DATA.branches.forEach(b=>{
+      if(b.deleted) return; // already gone: not part of the live picture
       tiers[b.tier]++;
       if(b.recommendation === 'safe-to-delete') cleanup++;
     });
@@ -2157,12 +2388,26 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     card.className = 'bcard';
     card.dataset.tip = b.tip;
     let badges = '';
-    if(b.merged_into_main) badges += '<span class="badge merged">merged</span>';
-    if(b.ahead_of_main>0) badges += `<span class="badge ahead">${b.ahead_of_main} unique commit${b.ahead_of_main>1?'s':''}</span>`;
+    if(b.integration){
+      const s = b.integration, parts = [];
+      if(s.open) parts.push(`${s.open} open`);
+      if(s.merged) parts.push(`${s.merged} merged`);
+      if(s.closed) parts.push(`${s.closed} closed`);
+      badges += `<span class="badge integ" title="Pull requests are raised against this branch">PR target &middot; ${parts.join(' &middot; ')}</span>`;
+      card.classList.add('integ');
+    }
+    if(b.deleted) badges += '<span class="badge gone">deleted after merge</span>';
+    else if(b.merged_into_main) badges += '<span class="badge merged">merged</span>';
+    if(b.pr){
+      const p = b.pr;
+      const label = `PR #${p.number}${p.base ? ' &rarr; ' + escapeHtml(p.base) : ''}${p.state === 'open' ? ' &middot; open' : ''}`;
+      badges += `<span class="badge pr${p.state === 'open' ? ' open' : ''}" title="${escapeHtml(p.title || '')}">${label}</span>`;
+    }
+    if(b.ahead_of_main>0 && !b.deleted) badges += `<span class="badge ahead">${b.ahead_of_main} unique commit${b.ahead_of_main>1?'s':''}</span>`;
     badges += recBadge(b);
     const who = branchAuthor(b);
     card.innerHTML = `
-      <div class="row1"><span class="tierdot ${b.tier}"></span><span class="bname">${escapeHtml(b.name)}</span>${who ? `<span class="bauthor" title="${escapeHtml(who)}">${escapeHtml(who)}</span>` : ''}</div>
+      <div class="row1"><span class="tierdot ${b.deleted ? 'gone' : b.tier}"></span><span class="bname">${escapeHtml(b.name)}</span>${who ? `<span class="bauthor" title="${escapeHtml(who)}">${escapeHtml(who)}</span>` : ''}</div>
       <div class="bmeta"><span>${relTime(b.date)}</span><span class="mono">${b.tip.slice(0,7)}</span></div>
       <div class="badgerow">${badges}</div>`;
     card.addEventListener('click', ()=> openBranchFocus(b.name));
@@ -2183,15 +2428,33 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       return b.tier === activeFilter;
     });
     const byDate = (x,y)=> new Date(y.date) - new Date(x.date);
-    const open = list.filter(b=> !b.merged_into_main || b.name === DATA.default_branch).sort(byDate);
-    const merged = list.filter(b=> b.merged_into_main && b.name !== DATA.default_branch).sort(byDate);
+    const isTrunk = b=> b.name === DATA.default_branch || b.name === DATA.repo_default_branch;
+    // branches that pull requests are raised against stand apart from the pile
+    const integ = list.filter(b=> !b.deleted && b.integration).sort(byDate);
+    const gone = list.filter(b=> b.deleted).sort(byDate);
+    const rest = list.filter(b=> !b.deleted && !b.integration);
+    const open = rest.filter(b=> !b.merged_into_main || isTrunk(b)).sort(byDate);
+    const merged = rest.filter(b=> b.merged_into_main && !isTrunk(b)).sort(byDate);
 
+    if(DATA.pulls_error){
+      const warn = document.createElement('div');
+      warn.className = 'pnote';
+      warn.textContent = 'Pull requests could not be read, so branches deleted after merge and branches that pull requests target are not shown. ' + DATA.pulls_error;
+      branchListEl.appendChild(warn);
+    }
     if(!list.length){
       const empty = document.createElement('div');
       empty.className = 'pnote';
       empty.textContent = 'No branches match.';
       branchListEl.appendChild(empty);
       return;
+    }
+    if(integ.length){
+      const h = document.createElement('div');
+      h.className = 'groupHead integ'; h.style.cursor = 'default';
+      h.innerHTML = `<span>Pull requests go here &middot; ${integ.length}</span>`;
+      branchListEl.appendChild(h);
+      integ.forEach(b=> branchListEl.appendChild(branchCard(b)));
     }
     const shown = (showAllOpen || q) ? open : open.slice(0, OPEN_PAGE);
     if(open.length){
@@ -2217,6 +2480,17 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       h.addEventListener('click', ()=>{ showMerged = !showMerged; renderBranchList(); });
       branchListEl.appendChild(h);
       if(open_) merged.forEach(b=> branchListEl.appendChild(branchCard(b)));
+    }
+    if(gone.length){
+      const open_ = showGone || !!q;
+      const h = document.createElement('button');
+      h.className = 'groupHead';
+      h.setAttribute('aria-expanded', open_ ? 'true' : 'false');
+      h.title = 'Branches whose pull request merged and which were then deleted. Rebuilt from the pull request.';
+      h.innerHTML = `<span>Deleted after merge &middot; ${gone.length}</span><span>${open_ ? 'Hide' : 'Show'}</span>`;
+      h.addEventListener('click', ()=>{ showGone = !showGone; renderBranchList(); });
+      branchListEl.appendChild(h);
+      if(open_) gone.forEach(b=> branchListEl.appendChild(branchCard(b)));
     }
   }
 
@@ -2556,7 +2830,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
       const body = document.createElement('div');
       body.className = 'cbody';
-      const tips = n.refs.map(name=>`<span class="tippill" data-name="${name}">${name}</span>`).join('');
+      const tips = n.refs.map(name=>{
+        const rb = byName[name];
+        const cls = rb ? (rb.deleted ? ' gone' : (rb.integration ? ' integ' : '')) : '';
+        const hint = rb && rb.deleted ? ' title="Deleted after its pull request merged"' : (rb && rb.integration ? ' title="Pull requests are raised against this branch"' : '');
+        return `<span class="tippill${cls}" data-name="${escapeHtml(name)}"${hint}>${escapeHtml(name)}</span>`;
+      }).join('');
+      const prChip = n.pr ? `<a class="prChip" href="${escapeHtml(n.pr.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(n.pr.title || '')}">PR #${n.pr.number}${n.pr.head ? ' &middot; ' + escapeHtml(n.pr.head) : ''}${n.pr.base ? ' &rarr; ' + escapeHtml(n.pr.base) : ''}</a>` : '';
       const hidden = hiddenBelow[n.sha];
       const hiddenTxt = hidden ? hidden.map(h=>`${h} commit${h>1?'s':''} skipped &darr;`).join(', ') : '';
       const starts = (n.branch_start || []).map(s=>
@@ -2571,7 +2851,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       body.innerHTML = `
         ${starts}
         ${headline}
-        <div class="cmeta"><span class="mono">${n.short}</span><span>${n.author}</span><span>${relTime(n.date)}</span>${hiddenTxt ? `<span class="hiddenMark">${hiddenTxt}</span>` : ''}${expandBtn}</div>
+        <div class="cmeta"><span class="mono">${n.short}</span><span>${n.author}</span><span>${relTime(n.date)}</span>${prChip}${hiddenTxt ? `<span class="hiddenMark">${hiddenTxt}</span>` : ''}${expandBtn}</div>
         ${tips ? `<div class="ctips">${tips}</div>` : ''}
         ${n.body ? `<div class="cdesc">${escapeHtml(n.body).replace(/\n/g,'<br>')}</div>` : ''}
       `;
@@ -2802,7 +3082,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     DATA.branches.slice().sort((a,b)=> a.name.localeCompare(b.name)).forEach(b=>{
       const opt = document.createElement('option');
       opt.value = b.name;
-      opt.textContent = b.name;
+      opt.textContent = b.deleted ? b.name + ' (deleted)' : b.name;
       branchHighlightSelect.appendChild(opt);
     });
     branchHighlightSelect.value = '';
@@ -2875,7 +3155,11 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     badges.push(`<span class="tierdot ${b.tier}" style="display:inline-block;"></span>`);
     badges.push(b.tier);
     if(b.branched_from) badges.push(`&middot; branched out from ${b.branched_from}`);
-    if(b.merged_into_main) badges.push('&middot; merged into '+DATA.default_branch);
+    if(b.deleted) badges.push(`&middot; deleted after merge${b.pr ? ` &middot; PR #${b.pr.number}${b.pr.base ? ' into ' + escapeHtml(b.pr.base) : ''}` : ''}`);
+    else if(b.pr && b.pr.state === 'open') badges.push(`&middot; PR #${b.pr.number} open${b.pr.base ? ' into ' + escapeHtml(b.pr.base) : ''}`);
+    if(b.integration) badges.push('&middot; pull requests are raised against this branch');
+    if(b.deleted){ /* described above */ }
+    else if(b.merged_into_main) badges.push('&middot; merged into '+DATA.default_branch);
     else if(b.ahead_of_main>0) badges.push(`&middot; ${b.ahead_of_main} commit${b.ahead_of_main>1?'s':''} not on ${DATA.default_branch}`);
     document.getElementById('pMeta').innerHTML = badges.join(' ');
 
