@@ -8,7 +8,7 @@
   --recent:#1B7489; --recent-soft:#DEF1F6;
   --warn:#975B0D; --warn-soft:#FBEBC9;
   --crit:#B83729; --crit-soft:#FBE1DC;
-  --lane0:#2F6FD9; --lane1:#B3389F; --lane2:#E0532F; --lane3:#219AB0; --lane4:#C38611; --dot:rgba(60,40,20,0.10);
+  --lane0:#2F6FD9; --lane1:#B3389F; --lane2:#E0532F; --lane3:#219AB0; --lane4:#C38611; --lane5:#2F8F5B; --lane6:#3C6FD1; --lane7:#8E5B2E; --lane8:#7F9A1E; --lane9:#C2416B; --dot:rgba(60,40,20,0.10);
   --shadow: 0 1px 2px rgba(60,40,20,0.06), 0 8px 24px -12px rgba(60,40,20,0.18);
   color-scheme: light;
 }
@@ -21,7 +21,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#6BCB94; --lane6:#7FA6F0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
     color-scheme: dark;
   }
@@ -34,7 +34,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#6BCB94; --lane6:#7FA6F0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
   color-scheme: dark;
 }
@@ -307,6 +307,7 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .badge.pr{background:var(--surface-2); color:var(--text-2);}
 .badge.pr.open{background:var(--accent-soft); color:var(--accent);}
 .bcard.integ{border-left:3px solid var(--accent);}
+.bsw{width:9px; height:9px; border-radius:2px; flex:none;}
 .tierdot.gone{background:transparent; box-shadow:inset 0 0 0 1.5px var(--text-3);}
 .groupHead.integ{color:var(--accent);}
 .subtle{color:var(--text-3);}
@@ -674,13 +675,7 @@ footer.note .mono{color:var(--text-3);}
         <span class="laneLegend">
           <span class="llGroup"><span class="llDot"></span>commit</span>
           <span class="llGroup"><span class="llDot ring"></span>tagged commit</span>
-          <span class="llGroup llSwatches">
-            <span class="llSwatch" style="background:var(--lane0)"></span><span class="llSwatch" style="background:var(--lane1)"></span><span class="llSwatch" style="background:var(--lane2)"></span><span class="llSwatch" style="background:var(--lane3)"></span><span class="llSwatch" style="background:var(--lane4)"></span>
-            = lanes, colors repeat &mdash; not one fixed branch
-          </span>
-          <span class="llGroup">centered on <b id="llDefaultTag">main</b></span>
-          <span class="llGroup" id="llExtra" style="display:none;"></span>
-        </span>
+          <span class="llGroup"><span class="llSwatch" style="background:var(--lane0)"></span>default branch &middot; every other branch keeps its own colour</span>
       </div>
       <div class="authorFilterRow" id="authorFilterRow"></div>
       <div id="graphScroll">
@@ -822,7 +817,6 @@ footer.note .mono{color:var(--text-3);}
 // tagged AZURE-SUPPORT so it can be found with a search.
 const FEATURES = { azure: true };
 
-const PALETTE = ["#6C8EF5","#F5A25D","#5FC7A3","#E76F8B","#9B8AE6","#4FB6C9","#E8C468","#D97BD4","#7FA9E0","#C97D60"];
 
 // =====================================================================
 // STORAGE — token + tracked repo list + per-repo cached graph data, all
@@ -1895,51 +1889,50 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
 
   // ---- lane layout, same reusable algorithm for full + condensed ----
   function layoutLanes(nodeOrder, parentsOf){
-    const lanes = []; // lanes[i] = sha this lane is waiting for, or null
     const drawn = new Set(nodeOrder); // a parent that is never drawn must not hold a lane open
-    const commitLane = {}, commitColor = {}, edges = [];
-    function findFreeLane(){
-      for(let i=0;i<lanes.length;i++) if(lanes[i]===null) return i;
+    // Lane 0 belongs to the centered branch's first-parent chain (spineSet) and to nothing else,
+    // so it is one straight line however the other branches fork from it or merge into it.
+    const base = nodeOrder.some(sha => spineSet.has(sha)) ? 1 : 0;
+    const lanes = base ? [null] : []; // lanes[i] = sha this lane is waiting for, or null
+    const commitLane = {}, edges = [];
+    function freeLane(){
+      for(let i=base;i<lanes.length;i++) if(lanes[i]===null) return i;
       lanes.push(null); return lanes.length-1;
     }
+    // the lane (1 and up) already waiting for sha, else a new one
+    function laneFor(sha){
+      const i = lanes.indexOf(sha, base);
+      if(i !== -1) return i;
+      const f = freeLane(); lanes[f] = sha; return f;
+    }
     for(const sha of nodeOrder){
-      let laneIdx = -1;
-      for(let i=0;i<lanes.length;i++){ if(lanes[i]===sha){ if(laneIdx===-1) laneIdx=i; else lanes[i]=null; } }
-      if(laneIdx===-1){ laneIdx = findFreeLane(); lanes[laneIdx]=sha; }
-      commitLane[sha]=laneIdx; commitColor[sha]=PALETTE[laneIdx % PALETTE.length];
-      const parents = parentsOf(sha).filter(p => drawn.has(p));
-      if(!parents.length){ lanes[laneIdx]=null; }
-      else{
-        lanes[laneIdx]=parents[0];
-        for(let k=1;k<parents.length;k++){
-          const extra = parents[k];
-          if(!lanes.includes(extra)){ const pl=findFreeLane(); lanes[pl]=extra; }
-        }
+      const onSpine = spineSet.has(sha);
+      let laneIdx = onSpine ? 0 : -1;
+      for(let i=base;i<lanes.length;i++){
+        if(lanes[i] !== sha) continue;
+        if(laneIdx === -1) laneIdx = i; else lanes[i] = null;
       }
-      for(const p of parents) edges.push({from:sha, to:p});
+      if(laneIdx === -1) laneIdx = freeLane();
+      commitLane[sha] = laneIdx;
+      lanes[laneIdx] = null;
+      // parentsOf is called once per commit: condensed mode counts hidden commits as it goes
+      parentsOf(sha).filter(p => drawn.has(p)).forEach((p, k)=>{
+        let via;
+        if(k === 0 && onSpine && spineSet.has(p)){ via = 0; lanes[0] = p; }
+        else if(k === 0 && !onSpine){ via = laneIdx; lanes[laneIdx] = p; }
+        else via = laneFor(p);
+        edges.push({from:sha, to:p, via});
+      });
     }
-    // Pin the default branch to lane 0 (leftmost line, first color) so it's
-    // always in the same place regardless of commit timing — swap whatever
-    // landed in lane 0 with main's lane rather than reassigning everything,
-    // so the rest of the layout stays as the algorithm naturally produced it.
-    if(mainTip !== undefined && mainTip in commitLane){
-      const mainLane = commitLane[mainTip];
-      if(mainLane !== 0){
-        const original = Object.assign({}, commitLane);
-        for(const sha of Object.keys(commitLane)){
-          if(original[sha] === 0) commitLane[sha] = mainLane;
-          else if(original[sha] === mainLane) commitLane[sha] = 0;
-          commitColor[sha] = PALETTE[commitLane[sha] % PALETTE.length];
-        }
-      }
-    }
-    let maxLane = 1; // a loop, not Math.max(...spread), which fails on very large histories
+    // a line in a lane with no dots must not be clipped, so count the lanes lines run in too
+    let maxLane = 1; // loops, not Math.max(...spread), which fails on very large histories
     for(const k in commitLane) if(commitLane[k] + 1 > maxLane) maxLane = commitLane[k] + 1;
-    return { commitLane, commitColor, edges, maxLane };
+    edges.forEach(e=>{ if(e.via + 1 > maxLane) maxLane = e.via + 1; });
+    return { commitLane, edges, maxLane };
   }
 
   function buildDataset(nodeOrder, parentsOf){
-    const { commitLane, commitColor, edges, maxLane } = layoutLanes(nodeOrder, parentsOf);
+    const { commitLane, edges, maxLane } = layoutLanes(nodeOrder, parentsOf);
     // derive each node's parents from the edges already built, rather than
     // calling parentsOf(sha) again — see the comment on nearestKeptParents
     // below for why a second call corrupts the hidden-commit-count cache.
@@ -1950,7 +1943,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       return {
         sha, short: sha.slice(0,7), parents: parentsBySha[sha] || [],
         author: c.author, subject: c.subject, body: c.body||'', date: c.date,
-        lane: commitLane[sha], color: commitColor[sha], y: i,
+        lane: commitLane[sha], y: i,
         is_merge: c.parents.length > 1,
         refs: refsBySha[sha] || [],
         event: eventBySha[sha] || null,
@@ -2027,7 +2020,27 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
 (function(){
   let LANE_W = 20;
   const LANE_PAD = 14, NODE_R = 4.5, LANE_W_MAX = 20, LANE_W_MIN = 10, LANE_BUDGET = 220;
-  const laneColors = ['var(--lane0)','var(--lane1)','var(--lane2)','var(--lane3)','var(--lane4)'];
+  // Colour follows the branch, not the lane: the repo's own default branch is always lane 0's blue,
+  // every other name hashes to one of the other nine colours, and no name gives a muted grey.
+  function branchColor(name){
+    if(!name) return 'var(--text-3)';
+    if(name === ((DATA && (DATA.repo_default_branch || DATA.default_branch)) || '')) return 'var(--lane0)';
+    let h = 0;
+    for(let i=0;i<name.length;i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return `var(--lane${1 + h % 9})`;
+  }
+  const colorForCommit = sha => branchColor(DATA && DATA.owner_by_sha && DATA.owner_by_sha[sha]);
+  // A line runs straight down lane xv (the lane it was reserved in), with a short S-bend at
+  // whichever end sits in a different lane. The same path serves the visible line and the click target.
+  function edgePath(x1, y1, xv, x2, y2){
+    const b = Math.min(26, (y2 - y1) * 0.4);
+    if(x1 === xv && xv === x2) return `M ${x1} ${y1} L ${x2} ${y2}`;
+    let d = `M ${x1} ${y1}`;
+    d += x1 === xv ? ` L ${xv} ${y1 + b}` : ` C ${x1} ${y1 + b / 2}, ${xv} ${y1 + b / 2}, ${xv} ${y1 + b}`;
+    d += ` L ${xv} ${y2 - b}`;
+    d += xv === x2 ? ` L ${x2} ${y2}` : ` C ${xv} ${y2 - b / 2}, ${x2} ${y2 - b / 2}, ${x2} ${y2}`;
+    return d;
+  }
 
   let DATA = null;
   let now = new Date();
@@ -2737,7 +2750,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     badges += recBadge(b);
     const who = branchAuthor(b);
     card.innerHTML = `
-      <div class="row1"><span class="tierdot ${b.deleted ? 'gone' : b.tier}"></span><span class="bname">${escapeHtml(b.name)}</span>${who ? `<span class="bauthor" title="${escapeHtml(who)}">${escapeHtml(who)}</span>` : ''}</div>
+      <div class="row1"><span class="tierdot ${b.deleted ? 'gone' : b.tier}"></span><span class="bsw" style="background:${branchColor(b.name)}" title="This branch's colour in the graph"></span><span class="bname">${escapeHtml(b.name)}</span>${who ? `<span class="bauthor" title="${escapeHtml(who)}">${escapeHtml(who)}</span>` : ''}</div>
       <div class="bmeta"><span>${relTime(b.date)}</span><span class="mono">${b.tip.slice(0,7)}</span></div>
       <div class="badgerow">${badges}</div>`;
     card.addEventListener('click', ()=> openBranchFocus(b.name));
@@ -3169,7 +3182,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
         const rb = byName[name];
         const cls = rb ? (rb.deleted ? ' gone' : (rb.integration ? ' integ' : '')) : '';
         const hint = rb && rb.deleted ? ' title="Deleted after its pull request merged"' : (rb && rb.integration ? ' title="Pull requests are raised against this branch"' : '');
-        return `<span class="tippill${cls}" data-name="${escapeHtml(name)}"${hint}>${escapeHtml(name)}</span>`;
+        return `<span class="tippill${cls}" data-name="${escapeHtml(name)}" style="border-left:3px solid ${branchColor(name)}"${hint}>${escapeHtml(name)}</span>`;
       }).join('');
       const prChip = n.pr ? `<a class="prChip" href="${escapeHtml(n.pr.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(n.pr.title || '')}">PR #${n.pr.number}${n.pr.head ? ' &middot; ' + escapeHtml(n.pr.head) : ''}${n.pr.base ? ' &rarr; ' + escapeHtml(n.pr.base) : ''}</a>` : '';
       const hidden = hiddenBelow[n.sha];
@@ -3231,16 +3244,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       const onPath = (!highlightPathSet || (highlightPathSet.has(e.from) && highlightPathSet.has(e.to))) && authorOk(c);
       const x1 = laneX(c.lane), y1 = rowY(c), x2 = laneX(p.lane), y2 = rowY(p);
       const path = document.createElementNS(svgns,'path');
-      let d;
-      if(x1===x2){
-        d = `M ${x1} ${y1} L ${x2} ${y2}`;
-      } else {
-        const bend = Math.min(26, (y2-y1)*0.4);
-        const midY = y1 + bend;
-        d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
-      }
+      const d = edgePath(x1, y1, e.via === undefined ? x1 : laneX(e.via), x2, y2);
       path.setAttribute('d', d);
-      path.setAttribute('stroke', laneColors[c.lane % laneColors.length]);
+      path.setAttribute('stroke', colorForCommit(e.from));
       path.setAttribute('stroke-width', onPath && (highlightPathSet || authorFilter.size) ? '3' : '2');
       path.setAttribute('fill', 'none');
       path.setAttribute('opacity', onPath ? '0.85' : '0.18');
@@ -3277,7 +3283,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       circ.setAttribute('cx', laneX(n.lane));
       circ.setAttribute('cy', rowY(n));
       circ.setAttribute('r', n.refs.length ? NODE_R+1.5 : NODE_R);
-      circ.setAttribute('fill', laneColors[n.lane % laneColors.length]);
+      circ.setAttribute('fill', colorForCommit(n.sha));
       circ.setAttribute('opacity', onPath ? '1' : '0.25');
       if(n.refs.length){
         circ.setAttribute('stroke', 'var(--surface)');
