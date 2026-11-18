@@ -26,8 +26,9 @@ Pull requests remember things the branch list forgets, so the map reads the 200 
 
 - **Deleted after merge.** A branch deleted after its pull request merged is rebuilt from that pull request (its name and last commit) and listed under *Deleted after merge*. Its commits appear in the graph with a dashed tag. Up to the 50 newest are shown.
 - **Pull requests go here.** If people raise pull requests against a branch other than the default (`develop`, `release/x`), that branch is pinned at the top of the list with its open, merged and closed counts, and its tag is filled in the graph.
-- **Measure against.** The graph's main line, "merged" and "ahead" all need a reference branch. It is the default branch unless most pull requests target another live branch, in which case that one is picked for you and the header says so. Override it with the *Measure against* menu above the graph. The choice is remembered per repo.
-- **Squash and rebase merges.** The pull request's merge commit is labelled "Pull request #N merged into ..." and stays visible in the condensed view, so a squash workflow still shows one step per pull request.
+- **Center on.** The graph is drawn around one branch: its line runs down the left, and "merged" and "ahead" are counted from it. It is the default branch unless most pull requests target another live branch, in which case that one is picked for you and the header says so. Override it with the *Center on* menu above the graph (the *Highlight* menu next to it only fades commits off a branch). The choice is remembered per repo. Nothing is tied to a branch name.
+- **Squash and rebase merges.** The merge commit gets its pull request's last commit as a second parent, so the line from the branch is drawn and the branch counts as merged. It stays visible in the condensed view, so a squash workflow still shows one step per pull request.
+- **Azure DevOps parent links.** Azure's commit list carries no parent ids, so the first load asks for each commit's parents (six at a time, retried if a request fails, "Linking commits..." in the loading text). They are remembered in the browser, so later loads only ask about new commits. A merge's second parent the list left out becomes a placeholder named after its branch (or "incoming branch").
 
 ## Features
 
