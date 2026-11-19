@@ -1436,6 +1436,57 @@ const Azure = (function(){
 })();
 
 // =====================================================================
+// DEMO — a made-up repo so every screen can be tried without a token. It tells
+// the story of a team that raises pull requests into `develop` (not `main`),
+// squash-merges most of them and deletes the branches, plus a hotfix that only
+// went to `main` and a stale experiment. Nothing leaves the page.
+// =====================================================================
+const Demo = (function(){
+  const id = 'demo/sample-app';
+  const DAY = 86400000;
+  function build(){
+    const t0 = Date.now(), list = [];
+    const c = (sha, parents, subject, author, daysAgo) =>
+      list.push({ sha, parents, subject, author, date:new Date(t0 - daysAgo*DAY).toISOString(), body:'' });
+    c('m1',[],'Initial commit','Asha',60);            c('m2',['m1'],'Set up CI','Asha',55);        c('m3',['m2'],'Release 1.0','Asha',40);
+    c('o1',['m3'],'Try a new chart library','Eli',50);                                          // stale experiment
+    c('d1',['m3'],'Start the develop branch','Asha',38);
+    c('l1',['d1'],'Login form','Ben',36);              c('l2',['l1'],'Login validation','Ben',35);
+    c('s1',['d1'],'Add login page (#1)','Ben',34);                                               // squash of l1, l2
+    c('x1',['s1'],'Fix date parsing','Chen',30);
+    c('g2',['s1','x1'],'Merge pull request #2 from feature/date-fix','Chen',29);                 // merge commit
+    c('q1',['g2'],'Search box','Dana',25);             c('q2',['q1'],'Search results','Dana',24);
+    c('s3',['g2'],'Add search (#3)','Dana',23);
+    c('e1',['s3'],'Settings page','Eli',20);           c('e2',['e1'],'Save settings','Eli',19);
+    c('s4',['s3'],'Add settings page (#4)','Eli',18);
+    c('h1',['m3'],'Hotfix: crash on startup','Asha',12);                                         // only on main
+    c('f1',['s4'],'Dark mode colours','Farah',10);     c('f2',['f1'],'Dark mode toggle','Farah',1);
+    c('d2',['s4'],'Bump version to 1.1','Asha',8);
+    const merged = (n,title,head,sha,merge,user,daysAgo) => ({ number:n, title, url:'', branch:head, base:'develop', headSha:sha,
+      mergeSha:merge, fork:false, forkOwner:'', mergedAt:new Date(t0 - daysAgo*DAY).toISOString(), closedAt:null, state:'merged', user });
+    const pulls = [
+      { number:5, title:'Dark mode', url:'', branch:'feature/dark-mode', base:'develop', headSha:'f2', mergeSha:null, fork:false, forkOwner:'', mergedAt:null, closedAt:null, state:'open', user:'Farah' },
+      merged(4,'Add settings page','feature/settings','e2','s4','Eli',18),
+      merged(3,'Add search','feature/search','q2','s3','Dana',23),
+      merged(2,'Fix date parsing','feature/date-fix','x1','g2','Chen',29),
+      merged(1,'Add login page','feature/login','l2','s1','Ben',34),
+    ];
+    const branches = [{name:'main',sha:'h1'},{name:'develop',sha:'d2'},{name:'feature/dark-mode',sha:'f2'},{name:'feature/old-experiment',sha:'o1'}];
+    return { list, pulls, branches };
+  }
+  return {
+    id,
+    getRepoInfo: async () => ({ defaultBranch:'main', fullName:'demo / sample-app' }),
+    getAllBranches: async () => build().branches,
+    getPulls: async () => build().pulls,
+    getAllCommits: async (branches, onProgress, softTips, opts) => {
+      const known = (opts && opts.known) || new Map();
+      return build().list.filter(x => !known.has(x.sha));
+    },
+  };
+})();
+
+// =====================================================================
 // PROVIDERS — one small facade so the app never cares which service a
 // tracked repo lives on. GitHub repos are stored as "owner/repo" (as they
 // always were); Azure DevOps repos as "azure:...".
@@ -1443,6 +1494,14 @@ const Azure = (function(){
 const Providers = (function(){
   const isAzure = id => /^azure:/i.test(id || '');
   function client(id){
+    if(id === Demo.id){
+      return {
+        provider: 'demo', service: 'the demo', id, host: 'demo', label: 'demo / sample-app', repoName: 'sample-app',
+        tokenLabel: '', pullsHint: '', token: () => 'demo',
+        getRepoInfo: Demo.getRepoInfo, getAllBranches: Demo.getAllBranches, getPulls: Demo.getPulls,
+        getAllCommits: Demo.getAllCommits, getCommitFiles: async () => [],
+      };
+    }
     if(isAzure(id)){
       const ref = Azure.parseId(id);
       const tk = () => ref ? Store.getAzureToken(ref.baseUrl) : '';
@@ -2564,6 +2623,15 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     }
   }
 
+  // The demo is a made-up repo that needs no token, so every screen can be tried first.
+  function startDemo(){
+    addRepoId(Demo.id);
+    repoSelect.value = Demo.id;
+    Store.setLastRepo(Demo.id);
+    loadRepo(Demo.id, {background:false});
+  }
+  centerState.addEventListener('click', ev=>{ if(ev.target.closest('#tryDemo')) startDemo(); });
+
   function maybeAutoLoad(){
     const repos = Store.getRepos();
     if(!repos.length) return;
@@ -3676,7 +3744,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
   // ---- boot ----
   populateRepoSelect();
   if(!Store.getRepos().some(r=> Providers.client(r).token())){
-    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add an access token and your first repo.</div>`);
+    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add an access token and your first repo.</div><button class="btn primary" id="tryDemo" type="button" style="position:static; transform:none; margin-top:14px;">Or try the demo repo</button>`);
   } else {
     maybeAutoLoad();
   }
