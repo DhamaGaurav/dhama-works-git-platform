@@ -18,7 +18,23 @@ A self-contained, single-file HTML tool that pulls a **GitHub** or **Azure DevOp
 
 Your tokens and repos are stored only in that browser's `localStorage`. Nothing is sent anywhere except directly to GitHub's API or to your Azure DevOps server.
 
-Optional: a GitHub token with **Pull requests: Read-only** adds pull request titles in Person details; everything works without it.
+A GitHub token with **Pull requests: Read-only** (Azure DevOps: **Code: Read**, which covers pull requests) unlocks the two features below. Without it the map still loads from branches alone.
+
+## Not in main yet, and loading only what is new
+
+- **Not in main yet.** The button above the graph answers "what have we merged into the team's branch that has not reached the default branch?", and its number tells you without opening it. The list is grouped by pull request (with the commits inside each, anything committed directly, and merge/sync commits kept apart). By default it is the center branch going into the repo default, or the branch pull requests go to when those are the same. It warns when the other branch has commits yours lacks (a hotfix). *Copy as release notes* puts a plain list on the clipboard. It reads only what is already loaded.
+- **Loading only what is new.** Downloaded commits are kept per repo in the browser (IndexedDB). A refresh asks only about branches that moved, so a repo that has not changed costs no commit requests, and one new commit costs one. Commits no branch can reach any more (after a force-push or a deleted branch) are dropped. Shift-click Refresh to forget them and download everything again.
+- **History limit.** The *History* menu loads only the last 30 days, 90 days, 6 or 12 months. It is faster on big repositories. Branches whose last commit is older still appear, but their commit counts only cover what is loaded. Choosing *all* again fetches the older history.
+
+## When branches are deleted, or pull requests go to a non-default branch
+
+Pull requests remember things the branch list forgets, so the map reads the 200 most recently updated ones on every load.
+
+- **Deleted after merge.** A branch deleted after its pull request merged is rebuilt from that pull request (its name and last commit) and listed under *Deleted after merge*. Its commits appear in the graph with a dashed tag. Up to the 50 newest are shown.
+- **Where pull requests land.** If people raise pull requests against a branch other than the default (`develop`, `release/x`), that branch is pinned at the top of the list with its open, merged and closed counts, and its tag is filled in the graph.
+- **Center on.** The graph is drawn around one branch: its line runs down the left, and "merged" and "ahead" are counted from it. It is the default branch unless most pull requests target another live branch, in which case that one is picked for you and the header says so. Override it with the *Center on* menu above the graph (the *Highlight* menu next to it only fades commits off a branch). The choice is remembered per repo. Nothing is tied to a branch name.
+- **Squash and rebase merges.** The merge commit gets its pull request's last commit as a second parent, so the line from the branch is drawn and the branch counts as merged. It stays visible in the condensed view, so a squash workflow still shows one step per pull request.
+- **Azure DevOps parent links.** Azure's commit list carries no parent ids, so the first load asks for each commit's parents (six at a time, retried if a request fails, "Linking commits..." in the loading text). They are remembered in the browser, so later loads only ask about new commits. A merge's second parent the list left out becomes a placeholder named after its branch (or "incoming branch").
 
 ## Features
 

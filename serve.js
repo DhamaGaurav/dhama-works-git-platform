@@ -71,11 +71,13 @@ function proxy(req, res, url){
   if(req.headers.authorization) headers.Authorization = req.headers.authorization;
   const lib = m[1] === 'https' ? https : http;
   console.log(`${req.method} ${host}${target.pathname}`);
+  const tail = target.pathname.split('/').slice(-2).join('/');
   const up = lib.request({
     protocol: target.protocol, hostname: target.hostname, port: target.port || undefined,
     path: target.pathname + target.search, method: req.method, headers,
     rejectUnauthorized: !insecure, timeout: 60000,
   }, ures => {
+    console.log(`  -> ${ures.statusCode} (${tail})`);
     // A rejected token often redirects to a sign-in page; the browser would follow it cross-origin. Report it plainly instead.
     if(ures.statusCode >= 300 && ures.statusCode < 400){ ures.resume(); return fail(res, 401, 'The server redirected to a sign-in page, so it did not accept the token.'); }
     const out = { 'Cache-Control': 'no-store' };
@@ -84,7 +86,7 @@ function proxy(req, res, url){
     ures.pipe(res);
   });
   up.on('timeout', () => up.destroy(new Error('timed out')));
-  up.on('error', e => { if(!res.headersSent) fail(res, 502, explain(e, host)); else res.destroy(); });
+  up.on('error', e => { console.log(`  -> failed (${tail}): ${explain(e, host)}`); if(!res.headersSent) fail(res, 502, explain(e, host)); else res.destroy(); });
   up.end();
 }
 

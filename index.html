@@ -8,7 +8,7 @@
   --recent:#1B7489; --recent-soft:#DEF1F6;
   --warn:#975B0D; --warn-soft:#FBEBC9;
   --crit:#B83729; --crit-soft:#FBE1DC;
-  --lane0:#2F6FD9; --lane1:#B3389F; --lane2:#E0532F; --lane3:#219AB0; --lane4:#C38611; --dot:rgba(60,40,20,0.10);
+  --lane0:#2F6FD9; --lane1:#B3389F; --lane2:#E0532F; --lane3:#219AB0; --lane4:#C38611; --lane5:#2F8F5B; --lane6:#3C6FD1; --lane7:#8E5B2E; --lane8:#7F9A1E; --lane9:#C2416B; --dot:rgba(60,40,20,0.10);
   --shadow: 0 1px 2px rgba(60,40,20,0.06), 0 8px 24px -12px rgba(60,40,20,0.18);
   color-scheme: light;
 }
@@ -21,7 +21,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#6BCB94; --lane6:#7FA6F0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
     color-scheme: dark;
   }
@@ -34,7 +34,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#6BCB94; --lane6:#7FA6F0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
   color-scheme: dark;
 }
@@ -208,9 +208,10 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .filters{display:flex; gap:6px; flex-wrap:wrap;}
 /* Small always-visible legend for the lane graph — sits inline with the
    existing "click a branch..." hint, wraps under it on narrow screens. */
-.laneLegend{display:flex; align-items:center; gap:10px; flex-wrap:wrap; row-gap:4px;}
+.laneLegend{display:flex; align-items:center; gap:4px 14px; flex-wrap:wrap; flex:1 1 100%;}
 .llGroup{display:flex; align-items:center; gap:5px; white-space:nowrap;}
 .llGroup b{color:var(--text-2); font-weight:700;}
+#llExtra{display:block; white-space:normal;}
 .llDot{width:7px; height:7px; border-radius:50%; background:var(--text-3); display:inline-block; flex:none;}
 .llDot.ring{background:var(--text-3); box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--text-3);}
 .llSwatches{gap:4px;}
@@ -300,6 +301,47 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .badge.local{background:var(--surface-2); color:var(--text-3); border:1px dashed var(--border);}
 .badge.rec-safe{background:var(--good-soft); color:var(--good);}
 .badge.rec-needs{background:var(--warn-soft); color:var(--warn);}
+/* pull-request awareness: branches pull requests target, and branches deleted after merge */
+.badge.integ{background:var(--accent); color:var(--on-accent);}
+.badge.gone{background:transparent; color:var(--text-3); border:1px dashed var(--border);}
+.badge.pr{background:var(--surface-2); color:var(--text-2);}
+.badge.pr.open{background:var(--accent-soft); color:var(--accent);}
+.bcard.integ{border-left:3px solid var(--accent);}
+.bsw{width:9px; height:9px; border-radius:2px; flex:none;}
+.tierdot.gone{background:transparent; box-shadow:inset 0 0 0 1.5px var(--text-3);}
+.groupHead.integ{color:var(--accent);}
+.subtle{color:var(--text-3);}
+.tippill.integ{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
+.tippill.integ:hover{color:var(--on-accent); filter:brightness(1.08);}
+.tippill.gone{border-style:dashed; font-style:italic; color:var(--text-3);}
+.prChip{
+  font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft);
+  padding:1px 7px; border-radius:999px; text-decoration:none; max-width:100%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.prChip:hover{text-decoration:underline;}
+/* what's going out */
+.outPick{padding:8px 18px; border-bottom:1px solid var(--border); font-size:11.5px; color:var(--text-3); font-weight:600;}
+.outPick summary{cursor:pointer; color:var(--accent); font-weight:700;}
+.outPickRow{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding-top:8px;}
+.outPick label{display:flex; align-items:center; gap:6px;}
+.outPick .branchHiSelect{max-width:200px;}
+.outSum{font-size:12.5px; font-weight:700; padding:10px 0 4px;}
+.outWarn{background:var(--warn-soft); color:var(--warn); font-size:12px; font-weight:600; padding:8px 10px; border-radius:8px; margin:8px 0;}
+.outGood{background:var(--good-soft); color:var(--good); font-size:12.5px; font-weight:700; padding:10px 12px; border-radius:8px; margin:10px 0;}
+.outHead2{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); padding:14px 0 4px;}
+.outGroup{padding:10px 0; border-bottom:1px solid var(--border);}
+.outGroup:last-child{border-bottom:none;}
+.outHead{display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;}
+.outTitle{font-size:13px; font-weight:700;}
+.outMeta{font-size:11px; color:var(--text-3); margin-top:3px;}
+.outGroup details{margin-top:4px; font-size:11.5px;}
+.outGroup summary{cursor:pointer; color:var(--text-2); font-weight:700;}
+.outCommit{display:flex; gap:8px; padding:3px 0 3px 4px; align-items:baseline;}
+.outCommit .mono{color:var(--text-3); font-size:10.5px; flex:none;}
+.outCommit .who{color:var(--text-3); margin-left:auto; flex:none; padding-left:8px;}
+.linkBtn{background:none; border:0; padding:0; color:var(--accent); font-family:inherit; font-size:11px; font-weight:700; cursor:pointer;}
+.linkBtn:hover{text-decoration:underline;}
 
 /* graph */
 #graphScroll{flex:1; min-height:0; overflow-y:auto; overflow-x:auto; position:relative;}
@@ -436,6 +478,12 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .branchHiSelect.active{color:var(--accent); border-color:var(--accent);}
+.hintBtn{
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; flex:none;
+  background:var(--accent-soft); border:1px solid var(--accent); color:var(--accent);
+  padding:4px 10px; border-radius:7px; cursor:pointer;
+}
+.hintBtn:hover{background:var(--accent); color:var(--on-accent);}
 .iconBtn{
   display:inline-flex; align-items:center; justify-content:center;
   background:var(--surface); border:1px solid var(--border); color:var(--text-2);
@@ -601,9 +649,9 @@ footer.note .mono{color:var(--text-3);}
       <div class="topRow">
         <select class="repoSelect" id="repoSelect"></select>
         <span class="refreshWrap"><span class="spider" id="spider"><svg viewBox="0 0 34 30" role="img" aria-label="Spider mascot, perched on the refresh button"><g class="legs"><path d="M13 14 L5 8 L2 12"/><path d="M13 16 L4 15 L1 20"/><path d="M13 18 L5 22 L3 27"/><path d="M14 20 L9 25 L8 29"/><path d="M21 14 L29 8 L32 12"/><path d="M21 16 L30 15 L33 20"/><path d="M21 18 L29 22 L31 27"/><path d="M20 20 L25 25 L26 29"/></g><ellipse class="body" cx="17" cy="19" rx="6.5" ry="7.5"/><path class="mark" d="M17 15.5 L19 19 L17 22.5 L15 19 Z"/><g class="head"><circle class="body" cx="17" cy="9.5" r="4.2"/><circle class="eye" cx="15.2" cy="8.8" r="1.1"/><circle class="eye" cx="18.8" cy="8.8" r="1.1"/></g></svg></span><button class="iconBtn" id="refreshBtn" title="Refresh"><span class="refreshIcon">&#8635;</span></button></span>
+        <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
         <button class="iconBtn" id="themeBtn" type="button"></button>
         <button class="iconBtn" id="openSettings" title="Settings">&#9881;</button>
-        <button class="drawerBtn" id="openBranches">Branches &middot; <span class="n" id="branchCount">—</span></button>
       </div>
     </div>
     <div class="ropeRail">
@@ -619,17 +667,15 @@ footer.note .mono{color:var(--text-3);}
         <div class="filters" id="graphModeRow"></div>
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
-        <select class="branchHiSelect" id="branchHighlightSelect" title="Highlight a branch's path, dim everything else"><option value="">Highlight branch&hellip;</option></select>
+        <select class="branchHiSelect" id="centerSelect" title="The branch the picture is drawn around: its line runs down the left, and &quot;merged&quot; and &quot;ahead&quot; are counted from it. Pick the branch your team raises pull requests against if it is not the default."><option>Center on&hellip;</option></select>
+        <button type="button" class="hintBtn" id="outBtn" style="display:none;" title="Work merged into one branch that has not reached the other yet">Not released yet</button>
+        <select class="branchHiSelect" id="branchHighlightSelect" title="Fade every commit that is not on this branch. The lines stay where they are; use Center on to redraw around another branch."><option value="">Highlight&hellip;</option></select>
+        <select class="branchHiSelect" id="depthSelect" title="How far back to load history. A shorter window loads faster on big repositories; branches whose last commit is older still appear, but their commit counts only cover what is loaded."><option value="0">History: all</option></select>
         <span>click a branch to see its history &middot; click a dot for that commit</span>
         <span class="laneLegend">
           <span class="llGroup"><span class="llDot"></span>commit</span>
           <span class="llGroup"><span class="llDot ring"></span>tagged commit</span>
-          <span class="llGroup llSwatches">
-            <span class="llSwatch" style="background:var(--lane0)"></span><span class="llSwatch" style="background:var(--lane1)"></span><span class="llSwatch" style="background:var(--lane2)"></span><span class="llSwatch" style="background:var(--lane3)"></span><span class="llSwatch" style="background:var(--lane4)"></span>
-            = lanes, colors repeat &mdash; not one fixed branch
-          </span>
-          <span class="llGroup">look for the <b id="llDefaultTag">main</b> tag to find your default branch</span>
-        </span>
+          <span class="llGroup"><span class="llSwatch" style="background:var(--lane0)"></span>default branch &middot; every other branch keeps its own colour</span>
       </div>
       <div class="authorFilterRow" id="authorFilterRow"></div>
       <div id="graphScroll">
@@ -670,6 +716,26 @@ footer.note .mono{color:var(--text-3);}
     <div class="pfoot">
       <button class="btn primary" id="pLocate">Show in history</button>
     </div>
+  </div>
+
+  <!-- what's going out: commits on one branch that are not yet on another, grouped by pull request -->
+  <div class="popup" id="outPopup" style="width:640px;">
+    <div class="phead2">
+      <div>
+        <div class="pname" id="outTitle" style="font-family:'Manrope',sans-serif;">Waiting to be released</div>
+        <div class="pmeta" id="outMeta">Merged into one branch, not yet in the other</div>
+      </div>
+      <button class="drawerClose" id="closeOut" aria-label="Close">&times;</button>
+    </div>
+    <details class="outPick">
+      <summary>Compare other branches</summary>
+      <div class="outPickRow">
+        <label>Work is in <select class="branchHiSelect" id="outFrom"></select></label>
+        <label>but not yet in <select class="branchHiSelect" id="outInto"></select></label>
+      </div>
+    </details>
+    <div class="pbody" id="outBody"></div>
+    <div class="pfoot"><span class="pnote" id="outCopied" style="margin-right:auto;"></span><button class="btn" id="outCopy">Copy as release notes</button></div>
   </div>
 
   <!-- settings: GitHub token + tracked repos, all stored only in this browser's localStorage -->
@@ -751,7 +817,6 @@ footer.note .mono{color:var(--text-3);}
 // tagged AZURE-SUPPORT so it can be found with a search.
 const FEATURES = { azure: true };
 
-const PALETTE = ["#6C8EF5","#F5A25D","#5FC7A3","#E76F8B","#9B8AE6","#4FB6C9","#E8C468","#D97BD4","#7FA9E0","#C97D60"];
 
 // =====================================================================
 // STORAGE — token + tracked repo list + per-repo cached graph data, all
@@ -795,6 +860,16 @@ const Store = (function(){
     },
     getSettingsProv(){ return safeGet('ghp_settings_prov') || ''; },   // which Settings tab was last open
     setSettingsProv(p){ return safeSet('ghp_settings_prov', p); },
+    // Which branch the graph and "merged" status are measured against, per repo.
+    // '' = automatic, '__default' = the repo's default branch, else a branch name.
+    getTrunk(repo){ return safeGet('ghp_trunk_' + repo) || ''; },
+    setTrunk(repo, v){ return v ? safeSet('ghp_trunk_' + repo, v) : (safeRemove('ghp_trunk_' + repo), true); },
+    // Azure DevOps parent ids already learned, per repo: {sha: [parent shas]}. A commit's parents never change.
+    getParents(repo){ try{ return JSON.parse(safeGet('ghp_parents_' + repo) || '{}') || {}; }catch(e){ return {}; } },
+    setParents(repo, map){ try{ return safeSet('ghp_parents_' + repo, JSON.stringify(map)); }catch(e){ return false; } },
+    // How far back to load history for a repo, in days. 0 = all of it.
+    getDepth(repo){ const n = Number(safeGet('ghp_depth_' + repo)); return n > 0 ? n : 0; },
+    setDepth(repo, days){ return days > 0 ? safeSet('ghp_depth_' + repo, String(days)) : (safeRemove('ghp_depth_' + repo), true); },
     getLastRepo(){ return safeGet(K_LAST) || ''; },
     setLastRepo(r){ return safeSet(K_LAST, r); },
     getCache(repo){
@@ -813,6 +888,53 @@ const Store = (function(){
     },
     clearCache(repo){ safeRemove(K_CACHE_PREFIX+repo); },
   };
+})();
+
+// =====================================================================
+// RAW STORE — the commits already downloaded, kept per repo in IndexedDB
+// (localStorage is too small for a long history). A refresh then only asks the
+// server about what is new. If IndexedDB is unavailable (private window), it
+// still holds them in memory for as long as the page is open.
+// =====================================================================
+const RawStore = (function(){
+  const mem = {};
+  let dbp = null;
+  function open(){
+    if(dbp) return dbp;
+    dbp = new Promise(res => {
+      try{
+        const rq = indexedDB.open('ghp_raw', 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore('repos');
+        rq.onsuccess = () => res(rq.result);
+        rq.onerror = rq.onblocked = () => res(null);
+      }catch(e){ res(null); }
+    });
+    return dbp;
+  }
+  async function load(id){
+    if(mem[id]) return mem[id];
+    const db = await open(); if(!db) return null;
+    return new Promise(res => {
+      try{
+        const rq = db.transaction('repos').objectStore('repos').get(id);
+        rq.onsuccess = () => { mem[id] = rq.result || null; res(mem[id]); };
+        rq.onerror = () => res(null);
+      }catch(e){ res(null); }
+    });
+  }
+  async function save(id, value){
+    mem[id] = value;
+    const db = await open(); if(!db) return false;
+    return new Promise(res => {
+      try{
+        const tx = db.transaction('repos', 'readwrite');
+        tx.objectStore('repos').put(value, id);
+        tx.oncomplete = () => res(true);
+        tx.onerror = tx.onabort = () => res(false);
+      }catch(e){ res(false); }
+    });
+  }
+  return { load, save };
 })();
 
 // =====================================================================
@@ -877,47 +999,78 @@ const GitHub = (function(){
     return out;
   }
 
-  // Fetches commit history reachable from each branch tip and merges/dedupes
-  // by sha, the browser-side equivalent of `git log --all`. Each GitHub
-  // commit object already carries parent shas, so no extra graph-walking
-  // calls are needed beyond pagination.
-  async function getAllCommits(owner, repo, branchTips, token, onProgress){
-    const seen = new Map(); // sha -> commit dict
+  // Fetches commit history reachable from each branch tip (the browser-side
+  // equivalent of `git log --all`) and returns only the commits NOT already in
+  // opts.known, so a refresh costs about one request per branch that moved.
+  // branchTips may be plain shas or {name, sha} branch objects. Each GitHub
+  // commit already carries its parent shas.
+  // A tip is walked newest-first until every parent of every new commit is one we
+  // already have or have just fetched; their own histories are complete, so nothing
+  // is missed. (Stopping at the first known commit would miss older commits only
+  // this branch has, because the log is in date order.)
+  // opts.sinceISO limits how far back to go; softTips (branches deleted after
+  // merge) are best-effort extras and may stop early.
+  async function getAllCommits(owner, repo, branchTips, token, onProgress, softTips, opts){
+    opts = opts || {};
+    const known = opts.known || new Map();
+    const since = opts.sinceISO ? '&since=' + encodeURIComponent(opts.sinceISO) : '';
+    const seen = new Map(); // fetched by this call
+    const have = sha => known.has(sha) || seen.has(sha);
     let branchIdx = 0;
-    for(const tip of branchTips){
-      branchIdx++;
-      if(onProgress) onProgress(`Fetching commit history (${branchIdx}/${branchTips.length} branches)…`);
-      let path = `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(tip)}&per_page=100`;
+    function toCommit(c){
+      const fullMsg = (c.commit && c.commit.message) || '';
+      const nl = fullMsg.indexOf('\n');
+      return {
+        sha: c.sha,
+        parents: (c.parents || []).map(p => p.sha),
+        author: (c.commit && c.commit.author && c.commit.author.name) || 'unknown',
+        date: (c.commit && c.commit.committer && c.commit.committer.date) || (c.commit && c.commit.author && c.commit.author.date),
+        subject: nl === -1 ? fullMsg : fullMsg.slice(0, nl),
+        // everything after the subject line — trimmed of the blank
+        // separator line git conventionally puts between them
+        body: nl === -1 ? '' : fullMsg.slice(nl + 1).replace(/^\n+/, '').trim(),
+      };
+    }
+    async function walk(tip, soft){
+      if(have(tip)) return; // its whole history is already here
+      const missing = new Set([tip]); // not done until the tip itself has turned up
+      let path = `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(tip)}&per_page=100${since}`;
       let guard = 0;
-      let hitKnown = false;
-      while(path && guard < 20 && !hitKnown){
+      while(path && guard < 20){
         guard++;
         const res = await req(path, token);
         const json = await res.json();
+        let fresh = 0;
         for(const c of json){
-          if(seen.has(c.sha)){
-            // this branch's remaining history was already pulled in by a
-            // previous, more complete branch — safe to stop paging early.
-            hitKnown = true;
-            continue;
-          }
-          {
-            const fullMsg = (c.commit && c.commit.message) || '';
-            const nl = fullMsg.indexOf('\n');
-            seen.set(c.sha, {
-              sha: c.sha,
-              parents: (c.parents || []).map(p => p.sha),
-              author: (c.commit && c.commit.author && c.commit.author.name) || 'unknown',
-              date: (c.commit && c.commit.committer && c.commit.committer.date) || (c.commit && c.commit.author && c.commit.author.date),
-              subject: nl === -1 ? fullMsg : fullMsg.slice(0, nl),
-              // everything after the subject line — trimmed of the blank
-              // separator line git conventionally puts between them
-              body: nl === -1 ? '' : fullMsg.slice(nl + 1).replace(/^\n+/, '').trim(),
-            });
-          }
+          if(have(c.sha)) continue;
+          fresh++;
+          const d = toCommit(c); seen.set(d.sha, d);
+          missing.delete(d.sha);
+          for(const q of d.parents) if(!have(q)) missing.add(q);
         }
+        if(!missing.size) break;
+        if(soft && !fresh) break;
         path = parseNextLink(res.headers.get('link'));
       }
+      // a branch whose tip is older than the history limit still gets its tip commit
+      if(opts.sinceISO && !soft && !have(tip)){
+        const d = toCommit(await (await req(`/repos/${owner}/${repo}/commits/${tip}`, token)).json());
+        seen.set(d.sha, d);
+      }
+    }
+    for(const tip of branchTips){
+      branchIdx++;
+      if(onProgress) onProgress(`Fetching commit history (${branchIdx}/${branchTips.length} branches)…`);
+      await walk(typeof tip === 'string' ? tip : tip.sha, false);
+    }
+    // Tips of branches that were deleted after their pull request merged. These
+    // are best-effort: if one can't be read, the rest of the graph still loads.
+    let soft = 0;
+    for(const tip of (softTips || [])){
+      soft++;
+      if(have(tip)) continue;
+      if(onProgress) onProgress(`Fetching branches deleted after merge (${soft}/${softTips.length})…`);
+      try{ await walk(tip, true); }catch(e){ if(e && e.status === 403) break; }
     }
     return [...seen.values()];
   }
@@ -944,18 +1097,29 @@ const GitHub = (function(){
 
   // On-request only (see Person details): one paginated call for all pull
   // requests, and one call per commit for the files it changed.
-  async function getPulls(owner, repo, token){
-    let path = `/repos/${owner}/${repo}/pulls?state=all&per_page=100`;
+  // Also read when the graph loads (maxPages: 2): it is how branches deleted
+  // after merge are found, and how branches that pull requests are raised
+  // against (an integration branch other than the default) are spotted.
+  async function getPulls(owner, repo, token, opts){
+    const maxPages = (opts && opts.maxPages) || 5;
+    let path = `/repos/${owner}/${repo}/pulls?state=all&sort=updated&direction=desc&per_page=100`;
     const out = [];
     let guard = 0;
-    while(path && guard < 5){
+    while(path && guard < maxPages){
       guard++;
       const res = await req(path, token);
       const json = await res.json();
-      for(const p of json) out.push({
-        number: p.number, title: p.title, url: p.html_url, branch: p.head && p.head.ref,
-        state: p.merged_at ? 'merged' : p.state, user: p.user && p.user.login,
-      });
+      for(const p of json){
+        const fork = !!(p.head && p.head.repo && p.base && p.base.repo && p.head.repo.full_name !== p.base.repo.full_name);
+        out.push({
+          number: p.number, title: p.title, url: p.html_url, branch: p.head && p.head.ref,
+          base: p.base && p.base.ref, headSha: p.head && p.head.sha,
+          mergeSha: p.merged_at ? p.merge_commit_sha : null,
+          fork, forkOwner: fork && p.head.user ? p.head.user.login : '',
+          mergedAt: p.merged_at, closedAt: p.closed_at,
+          state: p.merged_at ? 'merged' : p.state, user: p.user && p.user.login,
+        });
+      }
       path = parseNextLink(res.headers.get('link'));
     }
     return out;
@@ -1108,51 +1272,149 @@ const Azure = (function(){
     return (json.value || []).map(b => ({ name: stripHeads(b.name), sha: b.objectId }));
   }
 
-  // Commit history reachable from each branch tip, merged and deduped by
-  // sha. Each commit already carries its parent ids, so only paging is needed.
-  async function getAllCommits(r, branchTips, token, onProgress){
-    const seen = new Map();
+  // Waits 1s, 3s, then 8s between attempts at one flaky request. A rejected
+  // token, a forbidden repo or a missing one will not get better, so those are not retried.
+  async function withRetry(fn){
+    const waits = [1000, 3000, 8000];
+    for(let i = 0;; i++){
+      try{ return await fn(); }
+      catch(e){
+        if(i >= waits.length || (e && (e.status === 401 || e.status === 403 || e.status === 404))) throw e;
+        await new Promise(res => setTimeout(res, waits[i]));
+      }
+    }
+  }
+  // parents arrive as plain ids or as {commitId} / {sha} objects
+  const normParents = ps => (ps || []).map(p => typeof p === 'string' ? p : (p && (p.commitId || p.sha))).filter(Boolean);
+
+  // Azure DevOps' commit LIST carries no parent ids; only the single-commit
+  // endpoint does. Without parents the graph has no lines, so fetch them, six
+  // requests at a time. Answers are kept per repo in localStorage (a root
+  // commit's answer is []), so after the first load only new commits cost a request.
+  async function fillParents(r, list, token, onProgress){
+    const repoId = makeId(r.baseUrl, r.project, r.repo);
+    const cache = Store.getParents(repoId);
+    const todo = [];
+    for(const c of list){
+      if(c.parents.length) continue;
+      if(Array.isArray(cache[c.sha])) c.parents = cache[c.sha].slice(); else todo.push(c);
+    }
+    let done = 0, next = 0, failed = null;
+    async function worker(){
+      while(next < todo.length && !failed){
+        const c = todo[next++];
+        try{
+          const j = await withRetry(async () => (await req(`${repoApi(r)}/commits/${c.sha}`, token)).json());
+          c.parents = normParents(j.parents);
+          cache[c.sha] = c.parents.slice();
+        }catch(e){ failed = failed || e; }
+        done++;
+        if(onProgress && done % 10 === 0) onProgress(`Linking commits (${done}/${todo.length})…`);
+      }
+    }
+    try{ await Promise.all(Array.from({length: 6}, worker)); }
+    finally{ Store.setParents(repoId, cache); } // keep what was learned, even if a request failed
+    if(failed) throw failed;
+  }
+
+  // Commit history reachable from each branch, returning only the commits NOT
+  // already in opts.known. branches are {name, sha} (the history is asked for by
+  // branch name) or plain shas (asked for as a commit). The list does not carry
+  // parents, so each page's new commits get theirs from fillParents.
+  // A branch is walked newest-first until every parent of every new commit is one we
+  // already have or have just fetched; their own histories are complete, so nothing
+  // is missed, and a refresh costs about one page per branch that moved. (Stopping at
+  // the first known commit would miss older commits only this branch has: the list is
+  // in date order.) It also stops on an empty page, a short page, a page that repeats
+  // the previous one (the server ignored $skip), or the 20-page guard.
+  // opts.sinceISO limits how far back to go; softTips (branches deleted after
+  // merge) are best-effort extras and may stop early.
+  async function getAllCommits(r, branches, token, onProgress, softTips, opts){
+    opts = opts || {};
+    const known = opts.known || new Map();
+    const since = opts.sinceISO ? '&searchCriteria.fromDate=' + encodeURIComponent(opts.sinceISO) : '';
+    const seen = new Map(); // fetched by this call
+    const have = sha => known.has(sha) || seen.has(sha);
     const PAGE = 100;
     let idx = 0;
-    for(const tip of branchTips){
-      idx++;
-      if(onProgress) onProgress(`Fetching commit history (${idx}/${branchTips.length} branches)…`);
-      let skip = 0, guard = 0, hitKnown = false;
-      while(guard < 20 && !hitKnown){
-        guard++;
-        const url = `${repoApi(r)}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(tip)}`
-          + `&searchCriteria.itemVersion.versionType=commit&searchCriteria.$top=${PAGE}&searchCriteria.$skip=${skip}`;
-        const json = await (await req(url, token)).json();
+    function toCommit(c){
+      const msg = c.comment || '';
+      const nl = msg.indexOf('\n');
+      return {
+        sha: c.commitId,
+        parents: normParents(c.parents),
+        author: (c.author && c.author.name) || 'unknown',
+        date: (c.committer && c.committer.date) || (c.author && c.author.date),
+        subject: nl === -1 ? msg : msg.slice(0, nl),
+        body: nl === -1 ? '' : msg.slice(nl + 1).replace(/^\n+/, '').trim(),
+      };
+    }
+    async function walk(version, type, tipSha, soft){
+      if(have(tipSha)) return; // its whole history is already here
+      const missing = new Set([tipSha]); // not done until the tip itself has turned up
+      let skip = 0, lastFirst = null;
+      for(let guard = 0; guard < 20; guard++){
+        const url = `${repoApi(r)}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(version)}`
+          + `&searchCriteria.itemVersion.versionType=${type}&searchCriteria.$top=${PAGE}&searchCriteria.$skip=${skip}${since}`;
+        const json = await withRetry(async () => (await req(url, token)).json());
         const list = json.value || [];
+        if(!list.length) break;
+        if(list[0].commitId === lastFirst) break;
+        lastFirst = list[0].commitId;
+        const page = [];
         for(const c of list){
-          if(seen.has(c.commitId)){ hitKnown = true; continue; }
-          const msg = c.comment || '';
-          const nl = msg.indexOf('\n');
-          seen.set(c.commitId, {
-            sha: c.commitId,
-            parents: c.parents || [],
-            author: (c.author && c.author.name) || 'unknown',
-            date: (c.committer && c.committer.date) || (c.author && c.author.date),
-            subject: nl === -1 ? msg : msg.slice(0, nl),
-            body: nl === -1 ? '' : msg.slice(nl + 1).replace(/^\n+/, '').trim(),
-          });
+          if(have(c.commitId)) continue;
+          const d = toCommit(c); seen.set(d.sha, d); page.push(d);
         }
+        if(page.length) await fillParents(r, page, token, onProgress);
+        for(const d of page){
+          missing.delete(d.sha);
+          for(const q of d.parents) if(!have(q)) missing.add(q);
+        }
+        if(!missing.size) break;
         if(list.length < PAGE) break;
+        if(soft && !page.length) break;
         skip += PAGE;
       }
+      // a branch whose tip is older than the history limit still gets its tip commit
+      if(opts.sinceISO && !soft && !have(tipSha)){
+        const d = toCommit(await withRetry(async () => (await req(`${repoApi(r)}/commits/${tipSha}`, token)).json()));
+        seen.set(d.sha, d);
+      }
+    }
+    for(const b of branches){
+      idx++;
+      if(onProgress) onProgress(`Fetching commit history (${idx}/${branches.length} branches)…`);
+      if(typeof b === 'string') await walk(b, 'commit', b, false);
+      else await walk(b.name, 'branch', b.sha, false);
+    }
+    // Tips of branches deleted after their pull request completed: best-effort.
+    let soft = 0;
+    for(const tip of (softTips || [])){
+      soft++;
+      if(have(tip)) continue;
+      if(onProgress) onProgress(`Fetching branches deleted after merge (${soft}/${softTips.length})…`);
+      try{ await walk(tip, 'commit', tip, true); }catch(e){ if(e && (e.status === 401 || e.status === 403)) break; }
     }
     return [...seen.values()];
   }
 
-  // On-request only (see Person details).
-  async function getPulls(r, token){
+  // Also read when the graph loads (maxPages: 2), to find branches deleted
+  // after merge and the branches pull requests are raised against.
+  async function getPulls(r, token, opts){
     const out = [];
-    for(let page = 0; page < 5; page++){
+    const maxPages = (opts && opts.maxPages) || 5;
+    for(let page = 0; page < maxPages; page++){
       const url = `${repoApi(r)}/pullrequests?searchCriteria.status=all&$top=100&$skip=${page*100}`;
       const json = await (await req(url, token)).json();
       const list = json.value || [];
       for(const p of list) out.push({
         number: p.pullRequestId, title: p.title, branch: stripHeads(p.sourceRefName),
+        base: stripHeads(p.targetRefName),
+        headSha: p.lastMergeSourceCommit && p.lastMergeSourceCommit.commitId,
+        mergeSha: p.status === 'completed' && p.lastMergeCommit ? p.lastMergeCommit.commitId : null,
+        fork: !!p.forkSource, forkOwner: '',
+        mergedAt: p.status === 'completed' ? p.closedDate : null, closedAt: p.closedDate || null,
         url: `${r.baseUrl}/${encodeURIComponent(r.project)}/_git/${encodeURIComponent(r.repo)}/pullrequest/${p.pullRequestId}`,
         state: p.status === 'completed' ? 'merged' : (p.status === 'active' ? 'open' : p.status),
         user: p.createdBy && p.createdBy.displayName,
@@ -1174,6 +1436,57 @@ const Azure = (function(){
 })();
 
 // =====================================================================
+// DEMO — a made-up repo so every screen can be tried without a token. It tells
+// the story of a team that raises pull requests into `develop` (not `main`),
+// squash-merges most of them and deletes the branches, plus a hotfix that only
+// went to `main` and a stale experiment. Nothing leaves the page.
+// =====================================================================
+const Demo = (function(){
+  const id = 'demo/sample-app';
+  const DAY = 86400000;
+  function build(){
+    const t0 = Date.now(), list = [];
+    const c = (sha, parents, subject, author, daysAgo) =>
+      list.push({ sha, parents, subject, author, date:new Date(t0 - daysAgo*DAY).toISOString(), body:'' });
+    c('m1',[],'Initial commit','Asha',60);            c('m2',['m1'],'Set up CI','Asha',55);        c('m3',['m2'],'Release 1.0','Asha',40);
+    c('o1',['m3'],'Try a new chart library','Eli',50);                                          // stale experiment
+    c('d1',['m3'],'Start the develop branch','Asha',38);
+    c('l1',['d1'],'Login form','Ben',36);              c('l2',['l1'],'Login validation','Ben',35);
+    c('s1',['d1'],'Add login page (#1)','Ben',34);                                               // squash of l1, l2
+    c('x1',['s1'],'Fix date parsing','Chen',30);
+    c('g2',['s1','x1'],'Merge pull request #2 from feature/date-fix','Chen',29);                 // merge commit
+    c('q1',['g2'],'Search box','Dana',25);             c('q2',['q1'],'Search results','Dana',24);
+    c('s3',['g2'],'Add search (#3)','Dana',23);
+    c('e1',['s3'],'Settings page','Eli',20);           c('e2',['e1'],'Save settings','Eli',19);
+    c('s4',['s3'],'Add settings page (#4)','Eli',18);
+    c('h1',['m3'],'Hotfix: crash on startup','Asha',12);                                         // only on main
+    c('f1',['s4'],'Dark mode colours','Farah',10);     c('f2',['f1'],'Dark mode toggle','Farah',1);
+    c('d2',['s4'],'Bump version to 1.1','Asha',8);
+    const merged = (n,title,head,sha,merge,user,daysAgo) => ({ number:n, title, url:'', branch:head, base:'develop', headSha:sha,
+      mergeSha:merge, fork:false, forkOwner:'', mergedAt:new Date(t0 - daysAgo*DAY).toISOString(), closedAt:null, state:'merged', user });
+    const pulls = [
+      { number:5, title:'Dark mode', url:'', branch:'feature/dark-mode', base:'develop', headSha:'f2', mergeSha:null, fork:false, forkOwner:'', mergedAt:null, closedAt:null, state:'open', user:'Farah' },
+      merged(4,'Add settings page','feature/settings','e2','s4','Eli',18),
+      merged(3,'Add search','feature/search','q2','s3','Dana',23),
+      merged(2,'Fix date parsing','feature/date-fix','x1','g2','Chen',29),
+      merged(1,'Add login page','feature/login','l2','s1','Ben',34),
+    ];
+    const branches = [{name:'main',sha:'h1'},{name:'develop',sha:'d2'},{name:'feature/dark-mode',sha:'f2'},{name:'feature/old-experiment',sha:'o1'}];
+    return { list, pulls, branches };
+  }
+  return {
+    id,
+    getRepoInfo: async () => ({ defaultBranch:'main', fullName:'demo / sample-app' }),
+    getAllBranches: async () => build().branches,
+    getPulls: async () => build().pulls,
+    getAllCommits: async (branches, onProgress, softTips, opts) => {
+      const known = (opts && opts.known) || new Map();
+      return build().list.filter(x => !known.has(x.sha));
+    },
+  };
+})();
+
+// =====================================================================
 // PROVIDERS — one small facade so the app never cares which service a
 // tracked repo lives on. GitHub repos are stored as "owner/repo" (as they
 // always were); Azure DevOps repos as "azure:...".
@@ -1181,6 +1494,14 @@ const Azure = (function(){
 const Providers = (function(){
   const isAzure = id => /^azure:/i.test(id || '');
   function client(id){
+    if(id === Demo.id){
+      return {
+        provider: 'demo', service: 'the demo', id, host: 'demo', label: 'demo / sample-app', repoName: 'sample-app',
+        tokenLabel: '', pullsHint: '', token: () => 'demo',
+        getRepoInfo: Demo.getRepoInfo, getAllBranches: Demo.getAllBranches, getPulls: Demo.getPulls,
+        getAllCommits: Demo.getAllCommits, getCommitFiles: async () => [],
+      };
+    }
     if(isAzure(id)){
       const ref = Azure.parseId(id);
       const tk = () => ref ? Store.getAzureToken(ref.baseUrl) : '';
@@ -1192,8 +1513,8 @@ const Providers = (function(){
         token: tk,
         getRepoInfo: () => Azure.getRepoInfo(ref, tk()),
         getAllBranches: () => Azure.getAllBranches(ref, tk()),
-        getAllCommits: (tips, onProgress) => Azure.getAllCommits(ref, tips, tk(), onProgress),
-        getPulls: () => Azure.getPulls(ref, tk()),
+        getAllCommits: (tips, onProgress, softTips, opts) => Azure.getAllCommits(ref, tips, tk(), onProgress, softTips, opts),
+        getPulls: opts => Azure.getPulls(ref, tk(), opts),
         getCommitFiles: sha => Azure.getCommitFiles(ref, sha, tk()),
       };
     }
@@ -1206,8 +1527,8 @@ const Providers = (function(){
       token: tk,
       getRepoInfo: () => GitHub.getRepoInfo(owner, repo, tk()),
       getAllBranches: () => GitHub.getAllBranches(owner, repo, tk()),
-      getAllCommits: (tips, onProgress) => GitHub.getAllCommits(owner, repo, tips, tk(), onProgress),
-      getPulls: () => GitHub.getPulls(owner, repo, tk()),
+      getAllCommits: (tips, onProgress, softTips, opts) => GitHub.getAllCommits(owner, repo, tips, tk(), onProgress, softTips, opts),
+      getPulls: opts => GitHub.getPulls(owner, repo, tk(), opts),
       getCommitFiles: sha => GitHub.getCommitFiles(owner, repo, sha, tk()),
     };
   }
@@ -1216,14 +1537,142 @@ const Providers = (function(){
 // AZURE-SUPPORT (end)
 
 // =====================================================================
+// PULL REQUEST AWARENESS — what a plain branch list cannot show:
+//  1. Branches deleted after their pull request merged. They are gone from
+//     the branch list, but the pull request still remembers the branch name
+//     and its last commit, so they are brought back as "ghost" branches.
+//  2. Integration branches: when people raise pull requests against a branch
+//     other than the default (develop, release/x ...), that branch is the
+//     real trunk of the team's work. Measuring everything against the
+//     default branch makes all of it look unmerged.
+// =====================================================================
+const MAX_GHOSTS = 50;   // newest merged pull requests whose branch is gone
+const PR_PAGES = 2;      // 200 most recently updated pull requests per load
+const prLite = p => ({ number:p.number, title:p.title, url:p.url, base:p.base, head:p.branch,
+  state:p.state, user:p.user, at:p.mergedAt || p.closedAt || null });
+
+function ghostBranchesFrom(liveBranches, pulls, cap){
+  const live = new Set(liveBranches.map(b => b.name));
+  const taken = new Set(), out = [];
+  const merged = pulls.filter(p => p.state === 'merged' && p.headSha && p.branch)
+    .sort((a,b) => new Date(b.mergedAt || 0) - new Date(a.mergedAt || 0));
+  for(const p of merged){
+    const name = p.fork ? ((p.forkOwner || 'fork') + ':' + p.branch) : p.branch;
+    if(live.has(name) || taken.has(name)) continue; // a live branch with that name wins
+    taken.add(name);
+    out.push({ name, sha:p.headSha, deleted:true, pr:prLite(p) });
+    if(out.length >= cap) break;
+  }
+  return out;
+}
+
+// How many pull requests were raised against each branch, newest data first.
+function baseStatsFrom(pulls){
+  const by = {};
+  pulls.forEach(p => {
+    if(!p.base) return;
+    const s = (by[p.base] ||= { name:p.base, open:0, merged:0, closed:0, total:0 });
+    if(p.state === 'open') s.open++; else if(p.state === 'merged') s.merged++; else s.closed++;
+    s.total++;
+  });
+  return Object.values(by).sort((a,b) => b.total - a.total);
+}
+
+// pref: '' = automatic, '__default', or a branch name the user picked.
+function pickTrunk(baseStats, liveNames, repoDefault, pref){
+  if(pref === '__default') return repoDefault;
+  if(pref && liveNames.has(pref)) return pref;
+  const top = baseStats[0];
+  const intoDefault = (baseStats.find(s => s.name === repoDefault) || { total:0 }).total;
+  if(top && top.name !== repoDefault && liveNames.has(top.name) && top.total >= 2 && top.total > intoDefault) return top.name;
+  return repoDefault;
+}
+
+// A pull request's number as it appears in the commit title it left behind.
+// Azure DevOps: "Merged PR 12: ..."; GitHub: "Merge pull request #12 from ..."
+// (merge commit) or "Title (#12)" (squash). The squash form is only trusted when
+// the pull request has no merge commit id of its own, since "(#12)" can be said in any title.
+const PR_TITLE_STRICT = [/^Merged PR (\d+)/i, /^Merge pull request #(\d+)/i];
+const PR_TITLE_LOOSE = /\(#(\d+)\)\s*$/;
+
+// Makes the history whole before it is drawn. Pull requests are what remember
+// how work arrived, including after its branch was deleted:
+//  1. A merge's second parent that is not in the commit list becomes a
+//     placeholder commit, so the merge still shows a line coming in. A
+//     placeholder is only made for a commit some merge names as its parent.
+//  2. A pull request merged as ONE commit (squash or rebase) has that commit
+//     given its source commit as a second parent, so the line from the branch is drawn.
+//  3. A branch deleted after merge is pointed at the merge's second parent
+//     when its own last commit could not be read, and keeps its name.
+// Returns copies; the inputs are not changed. prBySha says which pull request
+// each merge or squash commit landed.
+function withIncomingBranches(commitsRaw, branchesRaw, pulls){
+  const commits = new Map(commitsRaw.map(c => [c.sha, Object.assign({}, c, { parents: c.parents.slice() })]));
+  const merged = pulls.filter(p => p.state === 'merged');
+  const byNumber = {}, byMergeSha = {};
+  merged.forEach(p => {
+    if(!(p.number in byNumber)) byNumber[p.number] = p;
+    if(p.mergeSha && !(p.mergeSha in byMergeSha)) byMergeSha[p.mergeSha] = p;
+  });
+  const prOf = {}; // commit sha -> pull request that landed as that commit
+  for(const c of commits.values()){
+    let pr = byMergeSha[c.sha];
+    if(!pr){
+      for(const re of PR_TITLE_STRICT){ const m = re.exec(c.subject || ''); if(m && byNumber[m[1]]){ pr = byNumber[m[1]]; break; } }
+    }
+    if(!pr){
+      const m = PR_TITLE_LOOSE.exec(c.subject || '');
+      if(m && byNumber[m[1]] && !byNumber[m[1]].mergeSha) pr = byNumber[m[1]];
+    }
+    if(pr) prOf[c.sha] = pr;
+  }
+  for(const sha of Object.keys(prOf)){
+    const c = commits.get(sha), pr = prOf[sha];
+    if(c.parents.length === 1 && pr.headSha && pr.headSha !== sha && pr.headSha !== c.parents[0] && commits.has(pr.headSha)){
+      c.parents.push(pr.headSha);
+    }
+  }
+  const branches = [];
+  const nameAtSha = {};
+  for(const b of branchesRaw){
+    if(b.deleted && !commits.has(b.sha)){
+      const mc = (b.pr && commits.get(b.pr.mergeSha)) || Object.keys(prOf).map(k => commits.get(k)).find(c => prOf[c.sha].number === (b.pr && b.pr.number));
+      const second = mc && mc.parents[1];
+      if(!second) continue; // nothing readable and nothing to point at: leave it out
+      branches.push(Object.assign({}, b, { sha: second }));
+      nameAtSha[second] = b.name;
+    } else branches.push(b);
+  }
+  for(const c of [...commits.values()]){
+    for(const p of c.parents.slice(1)){
+      if(commits.has(p)) continue;
+      commits.set(p, { sha:p, parents:[], author:c.author, date:new Date(new Date(c.date).getTime() - 1).toISOString(),
+        subject:nameAtSha[p] || 'incoming branch', body:'', placeholder:true });
+    }
+  }
+  const prBySha = {};
+  Object.keys(prOf).forEach(k => { prBySha[k] = prLite(prOf[k]); });
+  return { commits:[...commits.values()], branches, prBySha };
+}
+
+// =====================================================================
 // GRAPH PIPELINE — ported from build_graph.py (this session's earlier,
 // debugged Python pipeline). Kept as close to that logic as possible,
 // including its two fixed bugs (most-specific-branch commit ownership,
 // and the hidden-commit-count cache being a queue, not overwrite-by-key)
 // so this doesn't reintroduce either one.
 // =====================================================================
-function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
+// defaultBranchName is the branch everything is measured against (the "trunk").
+// It is the repo's default branch unless pull requests mostly target another
+// branch, or the user picked one. opts: { pulls, repoDefault, baseStats, auto, pullsError }
+function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts){
+  opts = opts || {};
+  const pulls = opts.pulls || [];
+  const repoDefault = opts.repoDefault || defaultBranchName;
+  const baseStats = opts.baseStats || baseStatsFrom(pulls);
   const now = new Date(nowISO);
+  const inc = withIncomingBranches(commitsRaw, branchesRaw, pulls);
+  commitsRaw = inc.commits; branchesRaw = inc.branches;
   const commits = {};
   commitsRaw.forEach(c => { commits[c.sha] = c; });
   // newest -> oldest, matching git log's natural order
@@ -1236,10 +1685,33 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     .map(b => ({
       name: b.name, tip: b.sha,
       date: commits[b.sha].date, author: commits[b.sha].author,
+      deleted: !!b.deleted, pr: b.pr || null,
     }));
   const byName = {};
   uniqueBranches.forEach(b => { byName[b.name] = b; });
 
+  // Pull requests, indexed two ways: by the commit they landed as (merge or
+  // squash commit on the target branch) and by the branch they came from.
+  const prBySha = inc.prBySha;
+  const prByHead = {};
+  pulls.forEach(p => {
+    if(p.branch && !p.fork && (!prByHead[p.branch] || p.state === 'open' || (prByHead[p.branch].state !== 'open' && p.number > prByHead[p.branch].number))) prByHead[p.branch] = p;
+  });
+  const statByBase = {}; baseStats.forEach(s => { statByBase[s.name] = s; });
+  uniqueBranches.forEach(b => {
+    if(!b.pr){
+      const p = prByHead[b.name];
+      // an old, finished pull request from a reused branch name says nothing
+      // about the branch as it is now, so only attach open ones or ones for this exact tip
+      if(p && (p.state === 'open' || p.headSha === b.tip)) b.pr = prLite(p);
+    }
+    // a branch other than the repo default that pull requests are raised against
+    if(b.name !== repoDefault && statByBase[b.name]) b.integration = statByBase[b.name];
+  });
+
+  // the picture is drawn around the trunk; if it is not there, the repo default, then the newest branch
+  defaultBranchName = byName[defaultBranchName] ? defaultBranchName
+    : (byName[repoDefault] ? repoDefault : (uniqueBranches[0] ? uniqueBranches[0].name : defaultBranchName));
   const mainBranch = byName[defaultBranchName];
   const mainTip = mainBranch ? mainBranch.tip : (uniqueBranches[0] && uniqueBranches[0].tip);
 
@@ -1277,11 +1749,17 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     else if(days < 21) tier = 'aging';
     else tier = 'stale';
     b.tier = tier;
-    if(b.merged_into_main && (tier==='aging'||tier==='stale') && b.name !== defaultBranchName){
+    const protectedName = b.name === defaultBranchName || b.name === repoDefault || !!b.integration;
+    if(b.merged_into_main && (tier==='aging'||tier==='stale') && !protectedName){
       b.recommendation = 'safe-to-delete';
-    } else if(!b.merged_into_main && b.ahead_of_main>0 && (tier==='aging'||tier==='stale')){
+    } else if(!b.merged_into_main && b.ahead_of_main>0 && (tier==='aging'||tier==='stale') && !protectedName){
       b.recommendation = 'needs-decision';
     } else {
+      b.recommendation = null;
+    }
+    if(b.deleted){
+      // its pull request merged and the branch is gone: nothing left to clean up
+      b.merged_into_main = true;
       b.recommendation = null;
     }
   }
@@ -1290,6 +1768,8 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
   const refsBySha = {};
   uniqueBranches.forEach(b=>{ (refsBySha[b.tip] ||= []).push(b.name); });
+  // where branches share a commit, the trunk's name comes first
+  Object.keys(refsBySha).forEach(k=>{ refsBySha[k].sort((x,y)=> (y === defaultBranchName) - (x === defaultBranchName)); });
 
   const spineRev = [];
   let cur = mainTip;
@@ -1391,7 +1871,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     let best = names[0], bestLen = branchByName[best].own_commits.length;
     for(const nm of names){
       const len = branchByName[nm].own_commits.length;
-      if(len < bestLen){ best = nm; bestLen = len; }
+      if(len < bestLen || (len === bestLen && nm === defaultBranchName)){ best = nm; bestLen = len; }
     }
     commitOwner[sha] = best;
   });
@@ -1426,8 +1906,10 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     const c = commits[sha];
     const parents = c.parents;
     if(parents.length > 1){
-      const target = ownerOf(sha) || defaultBranchName;
-      const incoming = ownerOf(parents[1]) || 'another branch';
+      // the pull request knows both ends best; else the trunk's own line, else whoever owns the commit
+      const pr0 = prBySha[sha];
+      const target = (pr0 && pr0.base) || (spineSet.has(sha) ? defaultBranchName : (ownerOf(sha) || defaultBranchName));
+      const incoming = (pr0 && pr0.head) || ownerOf(parents[1]) || 'another branch';
       if(target === defaultBranchName && incoming !== defaultBranchName){
         return { kind:'merge', text:`${incoming} merged into ${defaultBranchName}`, note:explainerFor('merge') };
       }
@@ -1438,6 +1920,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         return { kind:'update', text:`${target} was updated with ${defaultBranchName}`, note:explainerFor('update') };
       }
       return { kind:'merge', text:`${incoming} merged into ${target}`, note:explainerFor('merge') };
+    }
+    const pr = prBySha[sha];
+    if(pr){
+      // a squash or rebase merge: the branch's commits were folded into this
+      // one commit, so the graph has no second-parent line to show it by
+      return { kind:'merge', text:`Pull request #${pr.number} merged into ${pr.base || defaultBranchName}`,
+        note:'squash or rebase merge — the branch\'s commits were combined into this one commit, so there is no line back to the branch.' };
     }
     if(c.subject.startsWith('Revert ')){
       return { kind:'revert', text:c.subject, note:explainerFor('revert') };
@@ -1459,49 +1948,50 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
   // ---- lane layout, same reusable algorithm for full + condensed ----
   function layoutLanes(nodeOrder, parentsOf){
-    const lanes = []; // lanes[i] = sha this lane is waiting for, or null
-    const commitLane = {}, commitColor = {}, edges = [];
-    function findFreeLane(){
-      for(let i=0;i<lanes.length;i++) if(lanes[i]===null) return i;
+    const drawn = new Set(nodeOrder); // a parent that is never drawn must not hold a lane open
+    // Lane 0 belongs to the centered branch's first-parent chain (spineSet) and to nothing else,
+    // so it is one straight line however the other branches fork from it or merge into it.
+    const base = nodeOrder.some(sha => spineSet.has(sha)) ? 1 : 0;
+    const lanes = base ? [null] : []; // lanes[i] = sha this lane is waiting for, or null
+    const commitLane = {}, edges = [];
+    function freeLane(){
+      for(let i=base;i<lanes.length;i++) if(lanes[i]===null) return i;
       lanes.push(null); return lanes.length-1;
     }
+    // the lane (1 and up) already waiting for sha, else a new one
+    function laneFor(sha){
+      const i = lanes.indexOf(sha, base);
+      if(i !== -1) return i;
+      const f = freeLane(); lanes[f] = sha; return f;
+    }
     for(const sha of nodeOrder){
-      let laneIdx = -1;
-      for(let i=0;i<lanes.length;i++){ if(lanes[i]===sha){ if(laneIdx===-1) laneIdx=i; else lanes[i]=null; } }
-      if(laneIdx===-1){ laneIdx = findFreeLane(); lanes[laneIdx]=sha; }
-      commitLane[sha]=laneIdx; commitColor[sha]=PALETTE[laneIdx % PALETTE.length];
-      const parents = parentsOf(sha);
-      if(!parents.length){ lanes[laneIdx]=null; }
-      else{
-        lanes[laneIdx]=parents[0];
-        for(let k=1;k<parents.length;k++){
-          const extra = parents[k];
-          if(!lanes.includes(extra)){ const pl=findFreeLane(); lanes[pl]=extra; }
-        }
+      const onSpine = spineSet.has(sha);
+      let laneIdx = onSpine ? 0 : -1;
+      for(let i=base;i<lanes.length;i++){
+        if(lanes[i] !== sha) continue;
+        if(laneIdx === -1) laneIdx = i; else lanes[i] = null;
       }
-      for(const p of parents) edges.push({from:sha, to:p});
+      if(laneIdx === -1) laneIdx = freeLane();
+      commitLane[sha] = laneIdx;
+      lanes[laneIdx] = null;
+      // parentsOf is called once per commit: condensed mode counts hidden commits as it goes
+      parentsOf(sha).filter(p => drawn.has(p)).forEach((p, k)=>{
+        let via;
+        if(k === 0 && onSpine && spineSet.has(p)){ via = 0; lanes[0] = p; }
+        else if(k === 0 && !onSpine){ via = laneIdx; lanes[laneIdx] = p; }
+        else via = laneFor(p);
+        edges.push({from:sha, to:p, via});
+      });
     }
-    // Pin the default branch to lane 0 (leftmost line, first color) so it's
-    // always in the same place regardless of commit timing — swap whatever
-    // landed in lane 0 with main's lane rather than reassigning everything,
-    // so the rest of the layout stays as the algorithm naturally produced it.
-    if(mainTip !== undefined && mainTip in commitLane){
-      const mainLane = commitLane[mainTip];
-      if(mainLane !== 0){
-        const original = Object.assign({}, commitLane);
-        for(const sha of Object.keys(commitLane)){
-          if(original[sha] === 0) commitLane[sha] = mainLane;
-          else if(original[sha] === mainLane) commitLane[sha] = 0;
-          commitColor[sha] = PALETTE[commitLane[sha] % PALETTE.length];
-        }
-      }
-    }
-    const maxLane = Object.keys(commitLane).length ? Math.max(...Object.values(commitLane))+1 : 1;
-    return { commitLane, commitColor, edges, maxLane };
+    // a line in a lane with no dots must not be clipped, so count the lanes lines run in too
+    let maxLane = 1; // loops, not Math.max(...spread), which fails on very large histories
+    for(const k in commitLane) if(commitLane[k] + 1 > maxLane) maxLane = commitLane[k] + 1;
+    edges.forEach(e=>{ if(e.via + 1 > maxLane) maxLane = e.via + 1; });
+    return { commitLane, edges, maxLane };
   }
 
   function buildDataset(nodeOrder, parentsOf){
-    const { commitLane, commitColor, edges, maxLane } = layoutLanes(nodeOrder, parentsOf);
+    const { commitLane, edges, maxLane } = layoutLanes(nodeOrder, parentsOf);
     // derive each node's parents from the edges already built, rather than
     // calling parentsOf(sha) again — see the comment on nearestKeptParents
     // below for why a second call corrupts the hidden-commit-count cache.
@@ -1512,10 +2002,12 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       return {
         sha, short: sha.slice(0,7), parents: parentsBySha[sha] || [],
         author: c.author, subject: c.subject, body: c.body||'', date: c.date,
-        lane: commitLane[sha], color: commitColor[sha], y: i,
+        lane: commitLane[sha], y: i,
         is_merge: c.parents.length > 1,
         refs: refsBySha[sha] || [],
         event: eventBySha[sha] || null,
+        pr: prBySha[sha] || null,
+        placeholder: !!c.placeholder,
         branch_start: branchStartBySha[sha] || null,
       };
     });
@@ -1528,7 +2020,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   const keepSet = new Set(order.length ? [order[order.length-1]] : []);
   order.forEach(sha=>{
     const c = commits[sha];
-    if(c.parents.length > 1 || (refsBySha[sha] && refsBySha[sha].length)) keepSet.add(sha);
+    // pull request landing commits stay too, so a squash-merge workflow still
+    // shows one step per pull request instead of collapsing to just the tips
+    if(c.parents.length > 1 || prBySha[sha] || (refsBySha[sha] && refsBySha[sha].length)) keepSet.add(sha);
   });
 
   const hiddenCountQueue = {}; // key `${sha}|${target}` -> [steps, steps, ...]
@@ -1569,7 +2063,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     branches: uniqueBranches,
     full, condensed,
     main_tip: mainTip,
-    default_branch: defaultBranchName,
+    default_branch: defaultBranchName,       // the trunk: what everything is measured against
+    repo_default_branch: repoDefault,        // the repo's own default branch
+    trunk_auto: !!opts.auto,                 // true when the trunk was picked for the user
+    integration: baseStats.filter(s => s.name !== repoDefault),
+    pull_count: pulls.length,
+    depth_days: opts.depthDays || 0,           // 0 = all history was asked for
+    pulls_error: opts.pullsError || '',
     owner_by_sha: ownerBySha,
     now: nowISO,
   };
@@ -1579,7 +2079,27 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 (function(){
   let LANE_W = 20;
   const LANE_PAD = 14, NODE_R = 4.5, LANE_W_MAX = 20, LANE_W_MIN = 10, LANE_BUDGET = 220;
-  const laneColors = ['var(--lane0)','var(--lane1)','var(--lane2)','var(--lane3)','var(--lane4)'];
+  // Colour follows the branch, not the lane: the repo's own default branch is always lane 0's blue,
+  // every other name hashes to one of the other nine colours, and no name gives a muted grey.
+  function branchColor(name){
+    if(!name) return 'var(--text-3)';
+    if(name === ((DATA && (DATA.repo_default_branch || DATA.default_branch)) || '')) return 'var(--lane0)';
+    let h = 0;
+    for(let i=0;i<name.length;i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return `var(--lane${1 + h % 9})`;
+  }
+  const colorForCommit = sha => branchColor(DATA && DATA.owner_by_sha && DATA.owner_by_sha[sha]);
+  // A line runs straight down lane xv (the lane it was reserved in), with a short S-bend at
+  // whichever end sits in a different lane. The same path serves the visible line and the click target.
+  function edgePath(x1, y1, xv, x2, y2){
+    const b = Math.min(26, (y2 - y1) * 0.4);
+    if(x1 === xv && xv === x2) return `M ${x1} ${y1} L ${x2} ${y2}`;
+    let d = `M ${x1} ${y1}`;
+    d += x1 === xv ? ` L ${xv} ${y1 + b}` : ` C ${x1} ${y1 + b / 2}, ${xv} ${y1 + b / 2}, ${xv} ${y1 + b}`;
+    d += ` L ${xv} ${y2 - b}`;
+    d += xv === x2 ? ` L ${x2} ${y2}` : ` C ${xv} ${y2 - b / 2}, ${x2} ${y2 - b / 2}, ${x2} ${y2}`;
+    return d;
+  }
 
   let DATA = null;
   let now = new Date();
@@ -1589,7 +2109,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   let byName = {};
   let authorFilter = new Set(); // empty = everyone shown
   let branchQuery = '';
-  let showAllOpen = false, showMerged = false;
+  let showAllOpen = false, showMerged = false, showGone = false;
   const OPEN_PAGE = 8;
 
   const rowsEl = document.getElementById('rows');
@@ -1624,7 +2144,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   // ---- branch-focus popup ----
   const popup = document.getElementById('branchPopup');
   const popupBackdrop = document.getElementById('popupBackdrop');
-  function closePopup(){ popup.classList.remove('show'); popupBackdrop.classList.remove('show'); }
+  function closePopup(){ popup.classList.remove('show'); popupBackdrop.classList.remove('show'); const o = document.getElementById('outPopup'); if(o) o.classList.remove('show'); }
   document.getElementById('closePopup').addEventListener('click', closePopup);
   popupBackdrop.addEventListener('click', closePopup);
 
@@ -1980,9 +2500,10 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     loadRepo(repoSelect.value, {background:false});
   });
 
-  document.getElementById('refreshBtn').addEventListener('click', ()=>{
+  document.getElementById('refreshBtn').addEventListener('click', (ev)=>{
     if(!repoSelect.value){ openSettings(); return; }
-    loadRepo(repoSelect.value, {background:false, forceFresh:true});
+    // Shift-click forgets the commits kept in this browser and downloads everything again
+    loadRepo(repoSelect.value, {background:false, forceFresh:true, rebuild: !!(ev && ev.shiftKey)});
   });
 
   function setCenterState(html){
@@ -1995,6 +2516,36 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     centerState.style.display = 'none';
     rowsEl.style.display = '';
     svg.style.display = '';
+  }
+
+  // The last fetch, kept in memory so the "Center on" choice can rebuild
+  // the graph without fetching again. Null when the page is showing cached data.
+  let lastRaw = null;
+  function reachableCommits(map, tips){
+    const seen = new Set(), stack = tips.slice();
+    while(stack.length){
+      const sha = stack.pop();
+      if(seen.has(sha) || !map.has(sha)) continue;
+      seen.add(sha);
+      for(const q of map.get(sha).parents) stack.push(q);
+    }
+    return [...seen].map(sha=> map.get(sha));
+  }
+  function buildFromRaw(raw, nowISO){
+    const stats = baseStatsFrom(raw.pulls);
+    const live = new Set(raw.branches.filter(b=> !b.deleted).map(b=> b.name));
+    const pref = Store.getTrunk(raw.id);
+    const trunk = pickTrunk(stats, live, raw.info.defaultBranch, pref);
+    // the stored history can reach further back than the limit asked for now; show only the window
+    let commits = raw.commits;
+    if(raw.sinceISO){
+      const cut = new Date(raw.sinceISO).getTime(), tips = new Set(raw.branches.map(b=> b.sha));
+      commits = commits.filter(c=> tips.has(c.sha) || new Date(c.date).getTime() >= cut);
+    }
+    return buildGraphData(raw.branches, commits, trunk, nowISO, {
+      pulls: raw.pulls, repoDefault: raw.info.defaultBranch, baseStats: stats,
+      auto: !pref && trunk !== raw.info.defaultBranch, pullsError: raw.pullsError, depthDays: raw.depthDays || 0,
+    });
   }
 
   async function loadRepo(fullName, opts){
@@ -2025,13 +2576,32 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     }
     try{
       const info = await cl.getRepoInfo();
-      const branches = await cl.getAllBranches();
-      const commits = await cl.getAllCommits(branches.map(b=>b.sha), (msg)=>{
+      const liveBranches = await cl.getAllBranches();
+      // Pull requests are optional: without the permission the graph still loads,
+      // it just can't show branches deleted after merge or integration branches.
+      let pulls = [], pullsError = '';
+      try{ pulls = await cl.getPulls({ maxPages: PR_PAGES }); }
+      catch(err){ pullsError = (err.status === 401 || err.status === 403 || err.status === 404) ? cl.pullsHint : (err.message || String(err)); }
+      const ghosts = ghostBranchesFrom(liveBranches, pulls, MAX_GHOSTS);
+      // Commits downloaded on an earlier visit are reused: only what is new is fetched.
+      // Stored history only helps if it reaches back at least as far as is asked for now.
+      const depthDays = Store.getDepth(fullName);
+      const sinceISO = depthDays ? new Date(Date.now() - depthDays * 86400000).toISOString() : '';
+      const stored = opts.rebuild ? null : await RawStore.load(fullName);
+      const reaches = stored && stored.commits && (!stored.depthDays || (depthDays && stored.depthDays >= depthDays));
+      const known = new Map((reaches ? stored.commits : []).map(c=> [c.sha, c]));
+      const progress = (msg)=>{
         const d = document.getElementById('loadingDetail');
-        if(d) d.textContent = msg;
-      });
+        if(d) d.textContent = (known.size ? `${known.size} commits already in this browser. ` : '') + msg;
+      };
+      const fresh = await cl.getAllCommits(liveBranches, progress, ghosts.map(g=>g.sha), { known, sinceISO });
+      // keep only commits some current branch can still reach (a force-push or a deleted branch orphans the rest)
+      const all = new Map(known); fresh.forEach(c=> all.set(c.sha, c));
+      const commits = reachableCommits(all, liveBranches.concat(ghosts).map(b=> b.sha));
+      RawStore.save(fullName, { commits, depthDays, savedAt: new Date().toISOString() });
+      lastRaw = { id: fullName, info, branches: liveBranches.concat(ghosts), commits, pulls, pullsError, sinceISO, depthDays };
       const nowISO = new Date().toISOString();
-      const built = buildGraphData(branches, commits, info.defaultBranch, nowISO);
+      const built = buildFromRaw(lastRaw, nowISO);
       Store.setCache(fullName, built);
       now = new Date();
       applyData(built, meta, nowISO);
@@ -2043,15 +2613,24 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
         // restore the last-known-good timestamp instead of leaving the
         // footer stuck on "refreshing…" forever
         document.getElementById('footerNote').innerHTML =
-          `Live from ${cl.service} &middot; <span class="mono">${escapeHtml(cl.label)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(cached.fetchedAt)} &middot; refresh failed, showing cached data</span>`;
+          `Live from ${cl.service} &middot; <span class="mono">${escapeHtml(cl.label)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(cached.fetchedAt)} &middot; refresh failed, showing cached data${err && err.message ? ': ' + escapeHtml(err.message) : ''}</span>`;
       }
     } finally {
       refreshBtn.classList.remove('spin');
       document.body.classList.remove('working');
       refreshBtn.disabled = false;
-      refreshBtn.title = 'Refresh';
+      refreshBtn.title = 'Refresh (Shift-click to download all history again)';
     }
   }
+
+  // The demo is a made-up repo that needs no token, so every screen can be tried first.
+  function startDemo(){
+    addRepoId(Demo.id);
+    repoSelect.value = Demo.id;
+    Store.setLastRepo(Demo.id);
+    loadRepo(Demo.id, {background:false});
+  }
+  centerState.addEventListener('click', ev=>{ if(ev.target.closest('#tryDemo')) startDemo(); });
 
   function maybeAutoLoad(){
     const repos = Store.getRepos();
@@ -2069,22 +2648,42 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     closePerson();
     clearCenterState();
     activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set(); highlightPathSet = null;
-    branchQuery = ''; showAllOpen = false; showMerged = false;
+    branchQuery = ''; showAllOpen = false; showMerged = false; showGone = true;
     const searchEl = document.getElementById('branchSearch'); if(searchEl) searchEl.value = '';
+    // must be set before the first render: the graph's clickable lines look branches up by name
+    byName = {};
+    DATA.branches.forEach(b=> byName[b.name] = b);
 
     const pageTitleEl = document.getElementById('pageTitle');
     pageTitleEl.textContent = meta.repo + ' Branch Map';
     pageTitleEl.title = pageTitleEl.textContent;
-    const subtitleText = `${DATA.branches.length} branches across ${meta.fullName} · snapshot ${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}`;
+    const liveCount = DATA.branches.filter(b=> !b.deleted).length;
+    const goneCount = DATA.branches.length - liveCount;
+    const goneTxt = goneCount ? ` (+${goneCount} deleted after merge)` : '';
+    const trunkNote = DATA.trunk_auto ? ` · centered on ${DATA.default_branch} (most pull requests go there)` : '';
+    const subtitleText = `${liveCount} branches${goneTxt} across ${meta.fullName}${trunkNote} · snapshot ${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}`;
     const subtitleEl = document.getElementById('subtitle');
     subtitleEl.innerHTML =
-      `${DATA.branches.length} branches across <span class="mono">${meta.fullName}</span> &middot; snapshot <span class="mono">${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}</span>`;
+      `${liveCount} branches${goneTxt} across <span class="mono">${escapeHtml(meta.fullName)}</span>${trunkNote ? ` &middot; centered on <b class="mono">${escapeHtml(DATA.default_branch)}</b> <span class="subtle">(most pull requests go there)</span>` : ''} &middot; snapshot <span class="mono">${now.toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'})}</span>`;
     subtitleEl.title = subtitleText;
-    document.getElementById('branchCount').textContent = DATA.branches.length;
+    document.getElementById('branchCount').textContent = liveCount;
     const llDefaultTag = document.getElementById('llDefaultTag');
     if(llDefaultTag) llDefaultTag.textContent = DATA.default_branch || 'main';
+    const llExtra = document.getElementById('llExtra');
+    if(llExtra){
+      const bits = [];
+      if((DATA.integration || []).some(s=> byName[s.name])) bits.push('<b>filled tag</b> = where pull requests land');
+      if(goneCount) bits.push('<b>dashed tag</b> = deleted after merge');
+      llExtra.innerHTML = bits.join(' &middot; ');
+      llExtra.style.display = bits.length ? '' : 'none';
+    }
+    renderCenterSelect();
+    renderDepthSelect();
+    syncOutBtn();
     document.getElementById('footerNote').innerHTML =
-      `Live from ${meta.service || 'GitHub'} &middot; <span class="mono">${escapeHtml(meta.fullName)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`;
+      `Live from ${meta.service || 'GitHub'} &middot; <span class="mono">${escapeHtml(meta.fullName)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`
+      + (DATA.pulls_error ? ' &middot; <span class="refreshedNote">pull requests unavailable, so deleted branches stay unnamed</span>' : '')
+      + (DATA.depth_days ? ` &middot; <span class="refreshedNote">history limited to the last ${DATA.depth_days} days</span>` : '');
 
     renderStats();
     renderFilters();
@@ -2095,15 +2694,58 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     renderBranchHighlightSelect();
     renderGraph('condensed');
     settle();
-
-    byName = {};
-    DATA.branches.forEach(b=> byName[b.name] = b);
   }
+
+  // "Center on": the branch the graph is drawn around (its line is lane 0), and "merged" and "ahead"
+  // are worked out from. Automatic picks the branch most pull requests target.
+  const centerSelect = document.getElementById('centerSelect');
+  function renderCenterSelect(){
+    if(!centerSelect) return;
+    const repoDef = DATA.repo_default_branch || DATA.default_branch;
+    const live = DATA.branches.filter(b=> !b.deleted);
+    const targets = live.filter(b=> b.integration && b.name !== repoDef).map(b=> b.name);
+    const others = live.map(b=> b.name).filter(n=> n !== repoDef && !targets.includes(n)).sort((a,b)=> a.localeCompare(b));
+    const opt = (v, label, sel)=> `<option value="${escapeHtml(v)}"${sel ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+    const pref = currentMeta ? Store.getTrunk(currentMeta.id) : '';
+    const chosen = pref === '__default' ? '__default' : (pref && live.some(b=> b.name === pref) ? pref : (DATA.trunk_auto ? DATA.default_branch : '__default'));
+    let h = opt('__default', `Center on: ${repoDef} (default)`, chosen === '__default');
+    if(targets.length) h += `<optgroup label="Where pull requests land">${targets.map(n=> opt(n, n, chosen === n)).join('')}</optgroup>`;
+    if(others.length) h += `<optgroup label="Other branches">${others.map(n=> opt(n, n, chosen === n)).join('')}</optgroup>`;
+    centerSelect.innerHTML = h;
+    centerSelect.classList.toggle('active', chosen !== '__default');
+  }
+  const depthSelect = document.getElementById('depthSelect');
+  const DEPTHS = [[0,'History: all'],[365,'History: last 12 months'],[180,'History: last 6 months'],[90,'History: last 90 days'],[30,'History: last 30 days']];
+  function renderDepthSelect(){
+    if(!depthSelect) return;
+    const cur = currentMeta ? Store.getDepth(currentMeta.id) : 0;
+    depthSelect.innerHTML = DEPTHS.map(([d,l])=> `<option value="${d}"${d === cur ? ' selected' : ''}>${l}</option>`).join('');
+    depthSelect.classList.toggle('active', cur > 0);
+  }
+  if(depthSelect) depthSelect.addEventListener('change', ()=>{
+    if(!currentMeta) return;
+    Store.setDepth(currentMeta.id, Number(depthSelect.value));
+    loadRepo(currentMeta.id, {background:false});
+  });
+  if(centerSelect) centerSelect.addEventListener('change', ()=>{
+    if(!currentMeta) return;
+    Store.setTrunk(currentMeta.id, centerSelect.value);
+    if(lastRaw && lastRaw.id === currentMeta.id){
+      const nowISO = new Date().toISOString();
+      const built = buildFromRaw(lastRaw, nowISO);
+      Store.setCache(currentMeta.id, built);
+      now = new Date();
+      applyData(built, currentMeta, nowISO);
+    } else {
+      loadRepo(currentMeta.id, {background:false, forceFresh:true});
+    }
+  });
 
   function renderStats(){
     const tiers = {active:0, recent:0, aging:0, stale:0};
     let cleanup = 0;
     DATA.branches.forEach(b=>{
+      if(b.deleted) return; // already gone: not part of the live picture
       tiers[b.tier]++;
       if(b.recommendation === 'safe-to-delete') cleanup++;
     });
@@ -2157,12 +2799,26 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     card.className = 'bcard';
     card.dataset.tip = b.tip;
     let badges = '';
-    if(b.merged_into_main) badges += '<span class="badge merged">merged</span>';
-    if(b.ahead_of_main>0) badges += `<span class="badge ahead">${b.ahead_of_main} unique commit${b.ahead_of_main>1?'s':''}</span>`;
+    if(b.integration){
+      const s = b.integration, parts = [];
+      if(s.open) parts.push(`${s.open} open`);
+      if(s.merged) parts.push(`${s.merged} merged`);
+      if(s.closed) parts.push(`${s.closed} closed`);
+      badges += `<span class="badge integ" title="People raise pull requests into this branch">Pull requests: ${parts.join(' &middot; ')}</span>`;
+      card.classList.add('integ');
+    }
+    if(b.deleted) badges += '<span class="badge gone">deleted after merge</span>';
+    else if(b.merged_into_main) badges += '<span class="badge merged">merged</span>';
+    if(b.pr){
+      const p = b.pr;
+      const label = `PR #${p.number}${p.base ? ' &rarr; ' + escapeHtml(p.base) : ''}${p.state === 'open' ? ' &middot; open' : ''}`;
+      badges += `<span class="badge pr${p.state === 'open' ? ' open' : ''}" title="${escapeHtml(p.title || '')}">${label}</span>`;
+    }
+    if(b.ahead_of_main>0 && !b.deleted) badges += `<span class="badge ahead">${b.ahead_of_main} unique commit${b.ahead_of_main>1?'s':''}</span>`;
     badges += recBadge(b);
     const who = branchAuthor(b);
     card.innerHTML = `
-      <div class="row1"><span class="tierdot ${b.tier}"></span><span class="bname">${escapeHtml(b.name)}</span>${who ? `<span class="bauthor" title="${escapeHtml(who)}">${escapeHtml(who)}</span>` : ''}</div>
+      <div class="row1"><span class="tierdot ${b.deleted ? 'gone' : b.tier}"></span><span class="bsw" style="background:${branchColor(b.name)}" title="This branch's colour in the graph"></span><span class="bname">${escapeHtml(b.name)}</span>${who ? `<span class="bauthor" title="${escapeHtml(who)}">${escapeHtml(who)}</span>` : ''}</div>
       <div class="bmeta"><span>${relTime(b.date)}</span><span class="mono">${b.tip.slice(0,7)}</span></div>
       <div class="badgerow">${badges}</div>`;
     card.addEventListener('click', ()=> openBranchFocus(b.name));
@@ -2183,15 +2839,38 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       return b.tier === activeFilter;
     });
     const byDate = (x,y)=> new Date(y.date) - new Date(x.date);
-    const open = list.filter(b=> !b.merged_into_main || b.name === DATA.default_branch).sort(byDate);
-    const merged = list.filter(b=> b.merged_into_main && b.name !== DATA.default_branch).sort(byDate);
+    const isTrunk = b=> b.name === DATA.default_branch || b.name === DATA.repo_default_branch;
+    // branches that pull requests are raised against stand apart from the pile
+    const integ = list.filter(b=> !b.deleted && b.integration).sort(byDate);
+    const gone = list.filter(b=> b.deleted).sort(byDate);
+    const rest = list.filter(b=> !b.deleted && !b.integration);
+    const open = rest.filter(b=> !b.merged_into_main || isTrunk(b)).sort(byDate);
+    const merged = rest.filter(b=> b.merged_into_main && !isTrunk(b)).sort(byDate);
 
+    if(DATA.pulls_error){
+      const warn = document.createElement('div');
+      warn.className = 'pnote';
+      warn.textContent = 'Pull requests could not be read, so branches deleted after merge and branches that pull requests target are not shown. ' + DATA.pulls_error;
+      branchListEl.appendChild(warn);
+    }
     if(!list.length){
       const empty = document.createElement('div');
       empty.className = 'pnote';
       empty.textContent = 'No branches match.';
       branchListEl.appendChild(empty);
       return;
+    }
+    if(integ.length){
+      const h = document.createElement('div');
+      h.className = 'groupHead integ'; h.style.cursor = 'default';
+      h.innerHTML = `<span>Where pull requests land &middot; ${integ.length}</span>`;
+      branchListEl.appendChild(h);
+      const cap = document.createElement('div');
+      cap.className = 'pnote';
+      cap.style.padding = '0 6px 6px';
+      cap.textContent = `People raise pull requests into ${integ.length === 1 ? 'this branch' : 'these branches'}, not into ${DATA.repo_default_branch || DATA.default_branch}.`;
+      branchListEl.appendChild(cap);
+      integ.forEach(b=> branchListEl.appendChild(branchCard(b)));
     }
     const shown = (showAllOpen || q) ? open : open.slice(0, OPEN_PAGE);
     if(open.length){
@@ -2213,10 +2892,21 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       const h = document.createElement('button');
       h.className = 'groupHead';
       h.setAttribute('aria-expanded', open_ ? 'true' : 'false');
-      h.innerHTML = `<span>Merged &middot; ${merged.length}</span><span>${open_ ? 'Hide' : 'Show'}</span>`;
+      h.innerHTML = `<span>Merged into ${escapeHtml(DATA.default_branch)} &middot; ${merged.length}</span><span>${open_ ? 'Hide' : 'Show'}</span>`;
       h.addEventListener('click', ()=>{ showMerged = !showMerged; renderBranchList(); });
       branchListEl.appendChild(h);
       if(open_) merged.forEach(b=> branchListEl.appendChild(branchCard(b)));
+    }
+    if(gone.length){
+      const open_ = showGone || !!q;
+      const h = document.createElement('button');
+      h.className = 'groupHead';
+      h.setAttribute('aria-expanded', open_ ? 'true' : 'false');
+      h.title = 'Branches whose pull request merged and which were then deleted. Rebuilt from the pull request.';
+      h.innerHTML = `<span>Deleted after merge &middot; ${gone.length}</span><span>${open_ ? 'Hide' : 'Show'}</span>`;
+      h.addEventListener('click', ()=>{ showGone = !showGone; renderBranchList(); });
+      branchListEl.appendChild(h);
+      if(open_) gone.forEach(b=> branchListEl.appendChild(branchCard(b)));
     }
   }
 
@@ -2556,7 +3246,13 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
 
       const body = document.createElement('div');
       body.className = 'cbody';
-      const tips = n.refs.map(name=>`<span class="tippill" data-name="${name}">${name}</span>`).join('');
+      const tips = n.refs.map(name=>{
+        const rb = byName[name];
+        const cls = rb ? (rb.deleted ? ' gone' : (rb.integration ? ' integ' : '')) : '';
+        const hint = rb && rb.deleted ? ' title="Deleted after its pull request merged"' : (rb && rb.integration ? ' title="Pull requests are raised against this branch"' : '');
+        return `<span class="tippill${cls}" data-name="${escapeHtml(name)}" style="border-left:3px solid ${branchColor(name)}"${hint}>${escapeHtml(name)}</span>`;
+      }).join('');
+      const prChip = n.pr ? `<a class="prChip" href="${escapeHtml(n.pr.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(n.pr.title || '')}">PR #${n.pr.number}${n.pr.head ? ' &middot; ' + escapeHtml(n.pr.head) : ''}${n.pr.base ? ' &rarr; ' + escapeHtml(n.pr.base) : ''}</a>` : '';
       const hidden = hiddenBelow[n.sha];
       const hiddenTxt = hidden ? hidden.map(h=>`${h} commit${h>1?'s':''} skipped &darr;`).join(', ') : '';
       const starts = (n.branch_start || []).map(s=>
@@ -2571,7 +3267,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       body.innerHTML = `
         ${starts}
         ${headline}
-        <div class="cmeta"><span class="mono">${n.short}</span><span>${n.author}</span><span>${relTime(n.date)}</span>${hiddenTxt ? `<span class="hiddenMark">${hiddenTxt}</span>` : ''}${expandBtn}</div>
+        <div class="cmeta"><span class="mono">${n.short}</span><span>${n.author}</span><span>${relTime(n.date)}</span>${prChip}${hiddenTxt ? `<span class="hiddenMark">${hiddenTxt}</span>` : ''}${expandBtn}</div>
         ${tips ? `<div class="ctips">${tips}</div>` : ''}
         ${n.body ? `<div class="cdesc">${escapeHtml(n.body).replace(/\n/g,'<br>')}</div>` : ''}
       `;
@@ -2616,16 +3312,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       const onPath = (!highlightPathSet || (highlightPathSet.has(e.from) && highlightPathSet.has(e.to))) && authorOk(c);
       const x1 = laneX(c.lane), y1 = rowY(c), x2 = laneX(p.lane), y2 = rowY(p);
       const path = document.createElementNS(svgns,'path');
-      let d;
-      if(x1===x2){
-        d = `M ${x1} ${y1} L ${x2} ${y2}`;
-      } else {
-        const bend = Math.min(26, (y2-y1)*0.4);
-        const midY = y1 + bend;
-        d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
-      }
+      const d = edgePath(x1, y1, e.via === undefined ? x1 : laneX(e.via), x2, y2);
       path.setAttribute('d', d);
-      path.setAttribute('stroke', laneColors[c.lane % laneColors.length]);
+      path.setAttribute('stroke', colorForCommit(e.from));
       path.setAttribute('stroke-width', onPath && (highlightPathSet || authorFilter.size) ? '3' : '2');
       path.setAttribute('fill', 'none');
       path.setAttribute('opacity', onPath ? '0.85' : '0.18');
@@ -2662,7 +3351,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
       circ.setAttribute('cx', laneX(n.lane));
       circ.setAttribute('cy', rowY(n));
       circ.setAttribute('r', n.refs.length ? NODE_R+1.5 : NODE_R);
-      circ.setAttribute('fill', laneColors[n.lane % laneColors.length]);
+      circ.setAttribute('fill', colorForCommit(n.sha));
       circ.setAttribute('opacity', onPath ? '1' : '0.25');
       if(n.refs.length){
         circ.setAttribute('stroke', 'var(--surface)');
@@ -2798,11 +3487,11 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
   let highlightPathSet = null;
   function renderBranchHighlightSelect(){
     if(!branchHighlightSelect) return;
-    branchHighlightSelect.innerHTML = '<option value="">Highlight branch&hellip;</option>';
+    branchHighlightSelect.innerHTML = '<option value="">Highlight&hellip;</option>';
     DATA.branches.slice().sort((a,b)=> a.name.localeCompare(b.name)).forEach(b=>{
       const opt = document.createElement('option');
       opt.value = b.name;
-      opt.textContent = b.name;
+      opt.textContent = b.deleted ? b.name + ' (deleted)' : b.name;
       branchHighlightSelect.appendChild(opt);
     });
     branchHighlightSelect.value = '';
@@ -2875,7 +3564,11 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     badges.push(`<span class="tierdot ${b.tier}" style="display:inline-block;"></span>`);
     badges.push(b.tier);
     if(b.branched_from) badges.push(`&middot; branched out from ${b.branched_from}`);
-    if(b.merged_into_main) badges.push('&middot; merged into '+DATA.default_branch);
+    if(b.deleted) badges.push(`&middot; deleted after merge${b.pr ? ` &middot; PR #${b.pr.number}${b.pr.base ? ' into ' + escapeHtml(b.pr.base) : ''}` : ''}`);
+    else if(b.pr && b.pr.state === 'open') badges.push(`&middot; PR #${b.pr.number} open${b.pr.base ? ' into ' + escapeHtml(b.pr.base) : ''}`);
+    if(b.integration) badges.push('&middot; pull requests are raised against this branch');
+    if(b.deleted){ /* described above */ }
+    else if(b.merged_into_main) badges.push('&middot; merged into '+DATA.default_branch);
     else if(b.ahead_of_main>0) badges.push(`&middot; ${b.ahead_of_main} commit${b.ahead_of_main>1?'s':''} not on ${DATA.default_branch}`);
     document.getElementById('pMeta').innerHTML = badges.join(' ');
 
@@ -2897,10 +3590,161 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO){
     popupBackdrop.classList.add('show');
   }
 
+  // =====================================================================
+  // WHAT'S GOING OUT — the commits on one branch that are not yet on another,
+  // grouped by the pull request that brought them in. Worked out from the
+  // history already loaded; no extra requests. The usual use: the branch the
+  // team raises pull requests against, and the default branch it ships to.
+  // =====================================================================
+  const outPopup = document.getElementById('outPopup');
+  const outBody = document.getElementById('outBody');
+  const outFrom = document.getElementById('outFrom');
+  const outInto = document.getElementById('outInto');
+  const outBtn = document.getElementById('outBtn');
+  let outNotes = '';
+
+  function outgoing(fromName, intoName){
+    const by = {}; DATA.full.nodes.forEach(n=> by[n.sha] = n);
+    const anc = (sha)=>{
+      const seen = new Set(), st = [sha];
+      while(st.length){ const x = st.pop(); if(seen.has(x) || !by[x]) continue; seen.add(x); by[x].parents.forEach(q=> st.push(q)); }
+      return seen;
+    };
+    const A = anc(byName[fromName].tip), B = anc(byName[intoName].tip);
+    const S = new Set([...A].filter(x=> !B.has(x)));
+    const behind = [...B].filter(x=> !A.has(x) && !by[x].placeholder).length;
+    // newest pull request first; each takes the commits its merge brought in
+    const used = new Set(), groups = [];
+    [...S].map(x=> by[x]).filter(n=> n.pr).sort((a,b)=> new Date(b.date) - new Date(a.date)).forEach(L=>{
+      if(used.has(L.sha)) return;
+      used.add(L.sha);
+      const members = [L];
+      if(L.parents.length > 1){
+        const first = anc(L.parents[0]), st = [L.parents[1]];
+        while(st.length){
+          const x = st.pop();
+          if(!by[x] || first.has(x) || !S.has(x) || used.has(x)) continue;
+          used.add(x); members.push(by[x]); by[x].parents.forEach(q=> st.push(q));
+        }
+      }
+      groups.push({ pr: L.pr, landed: L, members: members.filter(m=> !m.placeholder) });
+    });
+    const rest = [...S].filter(x=> !used.has(x)).map(x=> by[x]).filter(n=> !n.placeholder).sort((a,b)=> new Date(b.date) - new Date(a.date));
+    const people = new Set(), all = [];
+    groups.forEach(g=> g.members.forEach(m=> all.push(m)));
+    rest.forEach(m=> all.push(m));
+    all.forEach(m=> people.add(m.author));
+    const oldest = all.length ? all.reduce((a,m)=> new Date(m.date) < new Date(a) ? m.date : a, all[0].date) : null;
+    return { groups, merges: rest.filter(n=> n.is_merge), direct: rest.filter(n=> !n.is_merge), behind, commits: all.length, people: people.size, oldest };
+  }
+
+  function plural(n, one, many){ return `${n} ${n === 1 ? one : (many || one + 's')}`; }
+  function commitLine(c){
+    return `<div class="outCommit"><span class="mono">${escapeHtml(c.short)}</span><span>${escapeHtml(c.subject)}</span><span class="who">${escapeHtml(c.author)}</span></div>`;
+  }
+
+  function renderOutgoing(){
+    const from = outFrom.value, into = outInto.value;
+    if(!from || !into || !byName[from] || !byName[into]){
+      outBody.innerHTML = '<div class="pnote">Pick the branch the work is on, and the branch it is going into.</div>';
+      outNotes = ''; return;
+    }
+    if(from === into){ outBody.innerHTML = '<div class="pnote">Pick two different branches.</div>'; outNotes = ''; return; }
+    const o = outgoing(from, into);
+    document.getElementById('outTitle').textContent = `Waiting to reach ${into}`;
+    document.getElementById('outMeta').textContent = `In ${from}, but not yet in ${into}`;
+    let h = '';
+    if(o.behind) h += `<div class="outWarn">${escapeHtml(into)} also has ${plural(o.behind, 'commit')} that ${escapeHtml(from)} does not (a hotfix, perhaps). If ${escapeHtml(into)} is where you ship, bring ${o.behind === 1 ? 'it' : 'them'} into ${escapeHtml(from)} first.</div>`;
+    if(!o.commits && !o.merges.length){
+      h += `<div class="outGood">Nothing is waiting: everything in ${escapeHtml(from)} is already in ${escapeHtml(into)}.</div>`;
+      outBody.innerHTML = h; outNotes = ''; return;
+    }
+    h += `<div class="outSum"><b>${plural(o.groups.length, 'pull request')}</b> (${plural(o.commits, 'commit')} by ${plural(o.people, 'person', 'people')}) ${o.groups.length === 1 ? 'is' : 'are'} in ${escapeHtml(from)} but not in ${escapeHtml(into)} yet.${o.oldest ? ' The oldest work is ' + relTime(o.oldest).replace(/ ago$/, '') + ' old.' : ''} This is what merging ${escapeHtml(from)} into ${escapeHtml(into)} would bring.</div>`;
+    const notes = [`In ${from}, not yet in ${into} (${plural(o.groups.length, 'pull request')}, ${plural(o.commits, 'commit')})`, ''];
+    o.groups.forEach(g=>{
+      const who = g.pr.user || g.landed.author;
+      h += `<div class="outGroup">
+        <div class="outHead"><a class="prChip" href="${escapeHtml(g.pr.url || '#')}" target="_blank" rel="noopener">#${g.pr.number}</a><span class="outTitle">${escapeHtml(g.pr.title || g.landed.subject)}</span><button class="linkBtn" data-locate="${g.landed.sha}">show in history</button></div>
+        <div class="outMeta">${escapeHtml(who)} &middot; merged ${relTime(g.pr.at || g.landed.date)}${g.pr.head ? ' &middot; ' + escapeHtml(g.pr.head) : ''}</div>
+        <details><summary>${plural(g.members.length, 'commit')}</summary>${g.members.map(commitLine).join('')}</details>
+      </div>`;
+      notes.push(`- ${g.pr.title || g.landed.subject} (#${g.pr.number}), ${who}`);
+    });
+    if(o.direct.length){
+      h += `<div class="outHead2">Committed directly &middot; ${o.direct.length}</div><div class="outGroup"><details${o.direct.length <= 8 ? ' open' : ''}><summary>${plural(o.direct.length, 'commit')} that did not come through a pull request</summary>${o.direct.map(commitLine).join('')}</details></div>`;
+      notes.push('', 'Committed directly:');
+      o.direct.forEach(c=> notes.push(`- ${c.subject}, ${c.author}`));
+    }
+    if(o.merges.length){
+      h += `<div class="outHead2">Merges and syncs &middot; ${o.merges.length}</div><div class="outGroup"><details><summary>${plural(o.merges.length, 'merge commit')} with no pull request</summary>${o.merges.map(commitLine).join('')}</details></div>`;
+    }
+    outBody.innerHTML = h;
+    outNotes = notes.join('\n');
+  }
+
+  // The branch the team merges work into, and the branch that work is meant to reach.
+  // By default: the center branch going into the repo default; when those are the
+  // same branch, the branch pull requests land on. None when there is no such pair.
+  function defaultOutPair(){
+    const repoDef = DATA.repo_default_branch || DATA.default_branch, trunk = DATA.default_branch;
+    const target = (DATA.integration || []).map(s=> s.name).find(n=> byName[n] && n !== repoDef) || '';
+    const from = trunk !== repoDef ? trunk : target;
+    return from && byName[from] && byName[repoDef] ? { from, into: repoDef } : null;
+  }
+  // The button says what is waiting, so the answer is visible without opening anything.
+  function syncOutBtn(){
+    if(!outBtn) return;
+    const pair = DATA ? defaultOutPair() : null;
+    if(!pair){ outBtn.style.display = 'none'; return; }
+    let prs = 0, direct = 0;
+    try{ const o = outgoing(pair.from, pair.into); prs = o.groups.length; direct = o.direct.length; }catch(e){}
+    outBtn.textContent = (prs || direct)
+      ? `Not in ${pair.into} yet \u00b7 ${plural(prs, 'PR')}${direct ? ' + ' + direct + ' direct' : ''}`
+      : `${pair.into} is up to date`;
+    outBtn.title = `Work merged into ${pair.from} that has not reached ${pair.into} yet. Click for the list.`;
+    outBtn.style.display = '';
+  }
+  function fillOutPickers(){
+    const live = DATA.branches.filter(b=> !b.deleted).map(b=> b.name).sort((a,b)=> a.localeCompare(b));
+    const pair = defaultOutPair() || { from:'', into: DATA.repo_default_branch || DATA.default_branch };
+    const from = pair.from, into = pair.into;
+    const opts = sel=> '<option value="">Pick a branch</option>' + live.map(n=> `<option value="${escapeHtml(n)}"${n === sel ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
+    outFrom.innerHTML = opts(from); outInto.innerHTML = opts(into);
+  }
+  function openOutgoing(){
+    if(!DATA) return;
+    fillOutPickers();
+    document.getElementById('outCopied').textContent = '';
+    renderOutgoing();
+    outPopup.classList.add('show'); popupBackdrop.classList.add('show');
+  }
+  function closeOutgoing(){ outPopup.classList.remove('show'); popupBackdrop.classList.remove('show'); }
+  outBtn.addEventListener('click', openOutgoing);
+  document.getElementById('closeOut').addEventListener('click', closeOutgoing);
+  outFrom.addEventListener('change', renderOutgoing);
+  outInto.addEventListener('change', renderOutgoing);
+  outBody.addEventListener('click', ev=>{
+    const b = ev.target.closest('[data-locate]');
+    if(b){ closeOutgoing(); locateInGraph(b.dataset.locate); }
+  });
+  document.getElementById('outCopy').addEventListener('click', async ()=>{
+    const note = document.getElementById('outCopied');
+    if(!outNotes){ note.textContent = 'Nothing to copy'; return; }
+    try{ await navigator.clipboard.writeText(outNotes); note.textContent = 'Copied'; return; }catch(e){}
+    // older or non-secure pages: copy through a hidden text box
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = outNotes; ta.style.cssText = 'position:fixed; opacity:0; top:0; left:0;';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy'); ta.remove();
+      note.textContent = ok ? 'Copied' : 'Could not copy here';
+    }catch(e){ note.textContent = 'Could not copy here'; }
+  });
+
   // ---- boot ----
   populateRepoSelect();
   if(!Store.getRepos().some(r=> Providers.client(r).token())){
-    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add an access token and your first repo.</div>`);
+    setCenterState(`<svg class="kolamDivider" viewBox="0 0 140 14" aria-hidden="true"><path d="M0 7 q8.75 -10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/><path d="M0 7 q8.75 10 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0"/></svg><div class="pulliRow"><i></i><i></i><i></i><i></i><i></i></div><div class="big">Welcome to your git platform</div><div>Open Settings to add an access token and your first repo.</div><button class="btn primary" id="tryDemo" type="button" style="position:static; transform:none; margin-top:14px;">Or try the demo repo</button>`);
   } else {
     maybeAutoLoad();
   }
