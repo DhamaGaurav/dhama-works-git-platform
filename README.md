@@ -54,9 +54,25 @@ Works with Azure DevOps Services (`dev.azure.com`, `*.visualstudio.com`) and Azu
 - **Person details:** pull requests are Azure's own, matched to branches by name. Files changed are listed per commit, but Azure doesn't report line counts, so added and removed show a dash.
 - **Limits:** "Browse my repos" is GitHub only. Up to 1000 branches per repo.
 
+### Sign in with Microsoft (no token to paste)
+
+For Azure DevOps cloud (`dev.azure.com`, `*.visualstudio.com`) when your organisation blocks the **Code** scope on personal access tokens. The local helper gets a Microsoft Entra ID token for you through Az PowerShell. No app registration, no client id.
+
+1. **Install Az.Accounts once** (PowerShell 7 `pwsh`, or Windows PowerShell on Windows): `Install-Module Az.Accounts -Scope CurrentUser`
+2. **Start the helper** (`node serve.js`, see below) and open http://localhost:8765. Restart it if it was already running before this feature existed.
+3. **Add your repo**, then in Settings, Azure DevOps press **Sign in with Microsoft** above that server's token box. A Microsoft page may open in your browser. After it, the box fills in and shows "Signed in as ...".
+
+**Renewal.** The token lasts about an hour. While the helper is running, the app asks it for a new one in the background when under 5 minutes are left, reusing your saved Az sign-in without a window. If that ever fails, press the button again.
+
+**What is stored where.** The token goes in the same per-server box in this browser's `localStorage` (`ghp_azure_tokens`). A second entry, `ghp_azure_signin`, records only its expiry, to tell sign-in tokens from pasted ones. Typing in the box yourself turns renewal off for that server. Az PowerShell keeps its own sign-in in your user profile; `Disconnect-AzAccount` removes it.
+
+On-premises servers and GitHub are not affected: paste a token as before.
+
 ### Token not accepted?
 
-If you see "Azure DevOps did not accept the token", open Settings, Azure DevOps and press **Test** next to that server's token. It asks the server who the token signs in as, then tells you what the server actually answered and what to check. The usual causes:
+Prefer not to paste tokens? See "Sign in with Microsoft" above, which also works when your organisation blocks the Code scope.
+
+If you see "Azure DevOps did not accept the token" (and you are not using Microsoft sign-in), open Settings, Azure DevOps and press **Test** next to that server's token. It asks the server who the token signs in as, then tells you what the server actually answered and what to check. The usual causes:
 
 - **Token created in a different organisation** (cloud). Create it in the same organisation as the repo, with Organization set to that organisation or "All accessible organizations", and the scope **Code: Read**. Check it hasn't expired.
 - **Windows sign-in only** (some on-premises servers). The server asks for Kerberos or NTLM and doesn't offer token sign-in. Ask your admin whether personal access tokens are turned on.
@@ -69,6 +85,10 @@ read -s PAT; curl -s -o /dev/null -w "%{http_code}\n" -u ":$PAT" "https://dev.az
 ```
 
 `200` means the token is fine. `203` or `401` means the server is rejecting it, so the cause is on the token or server side. For an on-premises server, use `https://YOUR-SERVER/YOUR-COLLECTION/_apis/git/repositories?api-version=6.0`.
+
+### Manual Microsoft Entra token
+
+The button above does this for you. By hand, in PowerShell: `Connect-AzAccount`, then `(Get-AzAccessToken -ResourceUrl 499b84ac-1321-427f-aa17-267ca6975798).Token` (on newer Az versions the token is a SecureString; convert it first). Paste the result into the token box. It expires after about an hour.
 
 ### Blocked by your browser (CORS)? Use the local helper
 
@@ -97,11 +117,14 @@ Settings shows "Running through the local helper" when it's active. GitHub repos
 | "The helper isn't set up to call …" | Restart with the flag it shows: `node serve.js --allow that-host` |
 | "…certificate this computer's Node doesn't trust" | Start with your company's certificate authority file: `NODE_EXTRA_CA_CERTS=/path/to/ca.pem node serve.js`. As a last resort, `--insecure` skips certificate checks (less safe). |
 | "Couldn't reach the local helper" | It stopped. Start `node serve.js` again. |
+| "Az PowerShell is not installed" | Run `Install-Module Az.Accounts -Scope CurrentUser` in PowerShell, then press the button again. If it says PowerShell itself is missing, install PowerShell 7 (`pwsh`). |
+| "The running helper is older and has no Microsoft sign-in" | Stop it with Ctrl+C and start `node serve.js` again. |
+| "Your Microsoft sign-in has ended" | Open Settings, Azure DevOps and press **Sign in with Microsoft**. It happens when the helper was stopped for over an hour or the Az sign-in expired. |
 | "Port 8765 is already in use" | `node serve.js --port 8766`, then open that port instead. |
 | "…did not accept the token" | Press **Test** next to the token in Settings, or see "Token not accepted?" above. |
 | Can't reach the server at all | Check the address, your network or VPN. If your network needs a corporate web proxy, Node won't use it automatically. |
 
-**Safe by design:** it listens on `127.0.0.1` only; forwards only read-only GET requests, only to hosts you allow, and only for the page it serves itself (other websites and odd Host headers are refused); never adds or stores your token (the page sends it); and logs only the method and path.
+**Safe by design:** it listens on `127.0.0.1` only; forwards only read-only GET requests, only to hosts you allow, and only for the page it serves itself (other websites and odd Host headers are refused); never adds or stores your token (the page sends it); and logs only the method and path. Microsoft sign-in is a POST accepted only from that same page and only for cloud hosts; the helper hands the token back to that page only and never logs or stores it.
 
 ### Removing Azure DevOps support
 

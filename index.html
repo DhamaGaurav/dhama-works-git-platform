@@ -795,7 +795,7 @@ footer.note .mono{color:var(--text-3);}
         <div class="settingsField">
           <label>Access tokens</label>
           <div id="azureTokenList"></div>
-          <div class="hint" id="azureTokenHint">A box appears here for each server you add. Use a personal access token with Code: Read. Stored only in this browser; sent only to that server.</div>
+          <div class="hint" id="azureTokenHint">A box appears here for each server you add. Paste a personal access token with Code: Read, or, with the local helper, press "Sign in with Microsoft" for dev.azure.com. Stored only in this browser; sent only to that server.</div>
           <div class="hint" id="azureHelperNote"></div>
         </div>
       </div>
@@ -830,6 +830,7 @@ const Store = (function(){
   // AZURE-SUPPORT
   const isAz = id => /^azure:/i.test(id || '');
   const K_AZ_TOKENS = 'ghp_azure_tokens'; // {"https://dev.azure.com/org": token, ...}: one per Azure DevOps host
+  const K_AZ_SIGNIN = 'ghp_azure_signin'; // {"https://dev.azure.com/org": {expiresOn}, ...}
   const K_CACHE_PREFIX = 'ghp_cache_'; // + repo id -> {data, fetchedAt}
 
   function safeGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
@@ -845,6 +846,13 @@ const Store = (function(){
       let m = {}; try{ m = JSON.parse(safeGet(K_AZ_TOKENS) || '{}'); }catch(e){}
       if(t) m[base] = t; else delete m[base];
       return safeSet(K_AZ_TOKENS, JSON.stringify(m));
+    },
+    // Marks tokens that came from "Sign in with Microsoft" (they renew by themselves): {base: {expiresOn}}
+    getAzureSignIn(base){ try{ return (JSON.parse(safeGet(K_AZ_SIGNIN) || '{}'))[base] || null; }catch(e){ return null; } },
+    setAzureSignIn(base, info){
+      let m = {}; try{ m = JSON.parse(safeGet(K_AZ_SIGNIN) || '{}'); }catch(e){}
+      if(info) m[base] = info; else delete m[base];
+      return safeSet(K_AZ_SIGNIN, JSON.stringify(m));
     },
     // With FEATURES.azure off, Azure repos are hidden but stay saved, so turning it back on restores them.
     getRepos(){
@@ -1244,10 +1252,36 @@ const Azure = (function(){
       return { ok: false, err };
     }
   }
+  function isCloud(baseUrl){
+    let host = ''; try{ host = new URL(baseUrl).hostname; }catch(e){}
+    return /(^|\.)dev\.azure\.com$|\.visualstudio\.com$/i.test(host);
+  }
+  // "Sign in with Microsoft": the local helper gets an Entra ID token from Az PowerShell.
+  // interactive false only reuses a saved Az sign-in; true may open a browser page.
+  async function signIn(baseUrl, interactive){
+    let res;
+    try{
+      res = await fetch('/_auth/azure', { method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store',
+        body: JSON.stringify({ base: baseUrl, interactive: !!interactive }) });
+    }catch(e){ throw new Error('Couldn\'t reach the local helper. Is "node serve.js" still running?'); }
+    if(res.status === 404) throw new Error('The running helper is older and has no Microsoft sign-in. Stop it (Ctrl+C) and start "node serve.js" again.');
+    const j = await res.json().catch(() => ({}));
+    if(!res.ok || !j.token) throw new Error(j.error || 'Microsoft sign-in failed (' + res.status + ').');
+    Store.setAzureToken(baseUrl, j.token);
+    Store.setAzureSignIn(baseUrl, { expiresOn: j.expiresOn });
+    return j;
+  }
+  // Renews a signed-in token that is close to expiring. On failure the old token stays (it may still work).
+  async function ensureFreshToken(baseUrl){
+    const info = Store.getAzureSignIn(baseUrl);
+    if(!HELPER || !info || !Store.getAzureToken(baseUrl)) return;
+    if(new Date(info.expiresOn).getTime() - Date.now() >= 5 * 60000) return;
+    try{ await signIn(baseUrl, false); }
+    catch(e){ console.warn('Microsoft token renewal failed:', e.message); }
+  }
   // Plain-words next steps for a rejected token, from what the server actually said.
   function advice(baseUrl, http){
-    let host = ''; try{ host = new URL(baseUrl).hostname; }catch(e){}
-    const cloud = /(^|\.)dev\.azure\.com$|\.visualstudio\.com$/i.test(host);
+    const cloud = isCloud(baseUrl);
     const auth = ((http && http.wwwAuth) || '').toLowerCase();
     const tips = [];
     if(/negotiate|ntlm/.test(auth) && !/basic/.test(auth)){
@@ -1432,7 +1466,7 @@ const Azure = (function(){
     }));
   }
 
-  return { HELPER, testConnection, advice, makeId, parseId, idFromWebUrl, label, getRepoInfo, getAllBranches, getAllCommits, getPulls, getCommitFiles };
+  return { HELPER, isCloud, signIn, ensureFreshToken, testConnection, advice, makeId, parseId, idFromWebUrl, label, getRepoInfo, getAllBranches, getAllCommits, getPulls, getCommitFiles };
 })();
 
 // =====================================================================
@@ -1504,18 +1538,29 @@ const Providers = (function(){
     }
     if(isAzure(id)){
       const ref = Azure.parseId(id);
-      const tk = () => ref ? Store.getAzureToken(ref.baseUrl) : '';
+      const base = ref ? ref.baseUrl : '';
+      const tk = () => ref ? Store.getAzureToken(base) : '';
+      const canSignIn = !!ref && Azure.HELPER && Azure.isCloud(base);
+      // renews a signed-in token that is about to expire, then runs the call with the current token
+      const withToken = async fn => {
+        await Azure.ensureFreshToken(base);
+        try{ return await fn(tk()); }
+        catch(e){
+          if(e && e.status === 401 && Store.getAzureSignIn(base)) e.message = 'Your Microsoft sign-in has ended. Open Settings, Azure DevOps and press "Sign in with Microsoft".';
+          throw e;
+        }
+      };
       return {
-        provider: 'azure', service: 'Azure DevOps', id, ref, host: ref ? ref.baseUrl : '',
+        provider: 'azure', service: 'Azure DevOps', id, ref, host: base,
         label: Azure.label(id), repoName: ref ? ref.repo : id,
-        tokenLabel: 'an Azure DevOps personal access token (Code: Read)',
+        tokenLabel: canSignIn ? 'a Microsoft sign-in (Settings, Azure DevOps) or an Azure DevOps personal access token (Code: Read)' : 'an Azure DevOps personal access token (Code: Read)',
         pullsHint: 'Azure DevOps refused the request. The token needs "Code: Read", which covers pull requests.',
         token: tk,
-        getRepoInfo: () => Azure.getRepoInfo(ref, tk()),
-        getAllBranches: () => Azure.getAllBranches(ref, tk()),
-        getAllCommits: (tips, onProgress, softTips, opts) => Azure.getAllCommits(ref, tips, tk(), onProgress, softTips, opts),
-        getPulls: opts => Azure.getPulls(ref, tk(), opts),
-        getCommitFiles: sha => Azure.getCommitFiles(ref, sha, tk()),
+        getRepoInfo: () => withToken(t => Azure.getRepoInfo(ref, t)),
+        getAllBranches: () => withToken(t => Azure.getAllBranches(ref, t)),
+        getAllCommits: (tips, onProgress, softTips, opts) => withToken(t => Azure.getAllCommits(ref, tips, t, onProgress, softTips, opts)),
+        getPulls: opts => withToken(t => Azure.getPulls(ref, t, opts)),
+        getCommitFiles: sha => withToken(t => Azure.getCommitFiles(ref, sha, t)),
       };
     }
     const [owner, repo] = (id || '').split('/');
@@ -2337,11 +2382,33 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
   // had to be re-entered on every visit even though it had been typed in.
   // One token box per Azure DevOps server among the tracked repos (cloud and
   // on-premises servers each need their own token).
+  // AZURE-SUPPORT: "Sign in with Microsoft" button for one cloud server; fills the token box when done.
+  function signInButton(base, inp, result){
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn primary'; btn.textContent = 'Sign in with Microsoft';
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      result.className = 'testResult'; result.textContent = 'A Microsoft page may open in your browser. Finish signing in there.';
+      try{
+        await Azure.signIn(base, true);
+        inp.value = Store.getAzureToken(base);
+        const r = await Azure.testConnection(base, inp.value);
+        if(!r.ok) throw new Error(r.anonymous ? 'The server answered, but did not recognise the sign-in.' : ((r.err && r.err.message) || 'The test failed.').replace(/ In Settings, Azure DevOps, press Test for details\./, ''));
+        result.className = 'testResult good';
+        result.textContent = 'Signed in as ' + (r.user || 'your Microsoft account') + '. The token renews by itself while the helper is running.';
+        btn.dispatchEvent(new CustomEvent('signedin'));
+      }catch(e){
+        result.className = 'testResult bad'; result.textContent = e.message || 'Microsoft sign-in failed.';
+      }
+      btn.disabled = false; btn.textContent = 'Sign in with Microsoft';
+    });
+    return btn;
+  }
   // AZURE-SUPPORT
   function renderAzureTokens(){
     document.getElementById('azureHelperNote').textContent = Azure.HELPER
-      ? 'Running through the local helper (serve.js), so browser CORS blocks do not apply.'
-      : 'Blocked by your browser (CORS)? Run the local helper: node serve.js, then open http://localhost:8765. See the README.';
+      ? 'Running through the local helper (serve.js), so browser CORS blocks do not apply. For dev.azure.com you can press "Sign in with Microsoft" instead of pasting a token (needs Az PowerShell, see the README).'
+      : 'Blocked by your browser (CORS)? Run the local helper: node serve.js, then open http://localhost:8765. See the README. The helper also adds "Sign in with Microsoft" for dev.azure.com.';
     const list = document.getElementById('azureTokenList');
     const hint = document.getElementById('azureTokenHint');
     const hosts = [...new Set(Store.getRepos().filter(Providers.isAzure).map(r=>{ const p = Azure.parseId(r); return p && p.baseUrl; }).filter(Boolean))];
@@ -2357,7 +2424,10 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       inp.setAttribute('aria-label', 'Access token for ' + base);
       inp.dataset.base = base;
       inp.value = Store.getAzureToken(base);
-      inp.addEventListener('input', ()=> Store.setAzureToken(base, inp.value.trim()));
+      const note = document.createElement('span');
+      note.className = 'hint'; note.style.margin = '0'; note.textContent = 'Signed in. Renews by itself.';
+      note.hidden = !Store.getAzureSignIn(base);
+      inp.addEventListener('input', ()=>{ Store.setAzureToken(base, inp.value.trim()); Store.setAzureSignIn(base, null); note.hidden = true; });
       const test = document.createElement('button');
       test.type = 'button'; test.className = 'btn'; test.textContent = 'Test';
       test.title = 'Check this token against ' + base.replace(/^https?:\/\//, '');
@@ -2389,7 +2459,16 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       });
       const row = document.createElement('div');
       row.className = 'tokRow'; row.appendChild(inp); row.appendChild(test);
-      wrap.appendChild(lbl); wrap.appendChild(row); wrap.appendChild(result);
+      wrap.appendChild(lbl);
+      if(Azure.HELPER && Azure.isCloud(base)){
+        const signRow = document.createElement('div');
+        signRow.className = 'tokRow'; signRow.style.marginBottom = '6px';
+        const sb = signInButton(base, inp, result);
+        sb.addEventListener('signedin', ()=>{ note.hidden = false; });
+        signRow.appendChild(sb); signRow.appendChild(note);
+        wrap.appendChild(signRow);
+      }
+      wrap.appendChild(row); wrap.appendChild(result);
       list.appendChild(wrap);
     });
   }
