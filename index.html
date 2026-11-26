@@ -320,7 +320,10 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .prChip:hover{text-decoration:underline;}
-.prChip.waiting{display:inline-flex; align-items:center; gap:4px; background:var(--warn-soft); color:var(--warn);}
+.prChip.waiting{display:inline-flex; align-items:center; gap:4px;}
+.prChip.waiting.aging{background:var(--warn-soft); color:var(--warn);}
+.prChip.waiting.stale{background:var(--crit-soft); color:var(--crit);}
+.hintBtn[aria-pressed="false"]{background:transparent; color:var(--text-3); border-color:var(--border);}
 .prChip .clk{flex:none;}
 /* what's going out */
 .outPick{padding:8px 18px; border-bottom:1px solid var(--border); font-size:11.5px; color:var(--text-3); font-weight:600;}
@@ -670,6 +673,7 @@ footer.note .mono{color:var(--text-3);}
       </div>
       <div class="filters" id="graphHint" style="color:var(--text-3); font-size:11px; font-weight:600; text-transform:none; padding:8px 16px 6px; flex:none;">
         <select class="branchHiSelect" id="centerSelect" title="The branch the picture is drawn around: its line runs down the left, and &quot;merged&quot; and &quot;ahead&quot; are counted from it. Pick the branch your team raises pull requests against if it is not the default."><option>Center on&hellip;</option></select>
+        <button type="button" class="hintBtn" id="waitBtn" aria-pressed="true" style="display:none;" title="Show or hide the dotted lines for pull requests that are waiting to be merged"></button>
         <button type="button" class="hintBtn" id="outBtn" style="display:none;" title="Work merged into one branch that has not reached the other yet">Not released yet</button>
         <select class="branchHiSelect" id="branchHighlightSelect" title="Fade every commit that is not on this branch. The lines stay where they are; use Center on to redraw around another branch."><option value="">Highlight&hellip;</option></select>
         <select class="branchHiSelect" id="depthSelect" title="How far back to load history. A shorter window loads faster on big repositories; branches whose last commit is older still appear, but their commit counts only cover what is loaded."><option value="0">History: all</option></select>
@@ -1464,16 +1468,24 @@ const Demo = (function(){
     c('h1',['m3'],'Hotfix: crash on startup','Asha',12);                                         // only on main
     c('f1',['s4'],'Dark mode colours','Farah',10);     c('f2',['f1'],'Dark mode toggle','Farah',1);
     c('d2',['s4'],'Bump version to 1.1','Asha',8);
+    c('n1',['s4'],'Notification settings','Ben',5);    c('n2',['n1'],'Email digest','Ben',3);     // more waiting pull requests
+    c('p1',['s3'],'Export to CSV','Chen',20);          c('p2',['p1'],'Export to PDF','Chen',16);
+    c('t1',['h1'],'Fix typo in the startup message','Dana',2);
     const merged = (n,title,head,sha,merge,user,daysAgo) => ({ number:n, title, url:'', branch:head, base:'develop', headSha:sha,
       mergeSha:merge, fork:false, forkOwner:'', mergedAt:new Date(t0 - daysAgo*DAY).toISOString(), closedAt:null, state:'merged', user });
+    const open = (n,title,head,sha,base,user,daysAgo) => ({ number:n, title, url:'', branch:head, base, headSha:sha, mergeSha:null,
+      fork:false, forkOwner:'', mergedAt:null, closedAt:null, createdAt:new Date(t0 - daysAgo*DAY).toISOString(), state:'open', user });
     const pulls = [
+      open(8,'Fix typo in the startup message','fix/startup-typo','t1','main','Dana',2),
+      open(7,'Export reports','feature/export','p2','develop','Chen',15),
+      open(6,'Notifications','feature/notifications','n2','develop','Ben',3),
       { number:5, title:'Dark mode', url:'', branch:'feature/dark-mode', base:'develop', headSha:'f2', mergeSha:null, fork:false, forkOwner:'', mergedAt:null, closedAt:null, createdAt:new Date(t0 - 9*DAY).toISOString(), state:'open', user:'Farah' },
       merged(4,'Add settings page','feature/settings','e2','s4','Eli',18),
       merged(3,'Add search','feature/search','q2','s3','Dana',23),
       merged(2,'Fix date parsing','feature/date-fix','x1','g2','Chen',29),
       merged(1,'Add login page','feature/login','l2','s1','Ben',34),
     ];
-    const branches = [{name:'main',sha:'h1'},{name:'develop',sha:'d2'},{name:'feature/dark-mode',sha:'f2'},{name:'feature/old-experiment',sha:'o1'}];
+    const branches = [{name:'main',sha:'h1'},{name:'develop',sha:'d2'},{name:'feature/dark-mode',sha:'f2'},{name:'feature/old-experiment',sha:'o1'},{name:'feature/notifications',sha:'n2'},{name:'feature/export',sha:'p2'},{name:'fix/startup-typo',sha:'t1'}];
     return { list, pulls, branches };
   }
   return {
@@ -2097,13 +2109,25 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
   // A pull request that is waiting: a dotted line from its branch's tip to the tip of the
   // branch it will merge into, with a clock on the line. The clock opens the pull request.
   const CLOCK_SVG = '<svg class="clk" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 3.2V6l2 1.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  const waitDays = o => o.since ? (Date.now() - new Date(o.since).getTime()) / 86400000 : 0;
+  const waitTone = o => waitDays(o) >= 14 ? 'stale' : (waitDays(o) >= 7 ? 'aging' : '');
+  let showWaiting = true;
+  try{ showWaiting = localStorage.getItem('ghp_wait_lines') !== '0'; }catch(e){}
+  // point on the line's curve, so clocks can be moved along it
+  function curvePoint(x1, y1, x2, y2, ym, t){
+    const u = 1 - t;
+    return [x1*u*u*u + 3*x1*u*u*t + 3*x2*u*t*t + x2*t*t*t, y1*u*u*u + 3*ym*u*u*t + 3*ym*u*t*t + y2*t*t*t];
+  }
   function drawWaiting(rowY){
+    if(!showWaiting) return;
+    const clocks = []; // where clocks already sit, so that several waiting pull requests never stack theirs
     (DATA.open_prs || []).forEach(o=>{
       const a = nodeBySha[o.headTip], b = nodeBySha[o.baseTip];
       if(!a || !b) return;
       const x1 = laneX(a.lane), y1 = rowY(a), x2 = laneX(b.lane), y2 = rowY(b), ym = (y1 + y2) / 2;
       const on = (!highlightPathSet || highlightPathSet.has(o.headTip)) && authorOk(a);
-      const col = colorForCommit(o.headTip);
+      const tone = waitTone(o);
+      const col = tone === 'stale' ? 'var(--crit)' : (tone === 'aging' ? 'var(--warn)' : colorForCommit(o.headTip));
       const line = document.createElementNS(svgns,'path');
       line.setAttribute('d', `M ${x1} ${y1} C ${x1} ${ym}, ${x2} ${ym}, ${x2} ${y2}`);
       line.setAttribute('stroke', col); line.setAttribute('stroke-width', '2.5'); line.setAttribute('fill', 'none');
@@ -2111,7 +2135,14 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       line.setAttribute('opacity', on ? '0.95' : '0.2');
       svg.appendChild(line);
       const g = document.createElementNS(svgns,'g');
-      g.setAttribute('transform', `translate(${(x1 + x2) / 2} ${ym})`);
+      // start at the middle; if another clock is close, slide along the line until there is room
+      let pos = [(x1 + x2) / 2, ym];
+      for(const t of [0.5, 0.38, 0.62, 0.28, 0.72, 0.2, 0.8]){
+        pos = curvePoint(x1, y1, x2, y2, ym, t);
+        if(clocks.every(c=> Math.hypot(c[0] - pos[0], c[1] - pos[1]) > 22)) break;
+      }
+      clocks.push(pos);
+      g.setAttribute('transform', `translate(${pos[0]} ${pos[1]})`);
       g.setAttribute('opacity', on ? '1' : '0.25');
       g.style.cursor = o.url ? 'pointer' : 'default';
       g.innerHTML = `<circle r="9" fill="var(--surface)" stroke="${col}" stroke-width="1.6"/><path d="M0 -4.6V0.2l3.3 2" fill="none" stroke="${col}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -2723,6 +2754,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     renderCenterSelect();
     renderDepthSelect();
     syncOutBtn();
+    syncWaitBtn();
     document.getElementById('footerNote').innerHTML =
       `Live from ${meta.service || 'GitHub'} &middot; <span class="mono">${escapeHtml(meta.fullName)}</span> &middot; <span class="refreshedNote">last refreshed ${relTime(fetchedAtISO || now.toISOString())}</span>`
       + (DATA.pulls_error ? ' &middot; <span class="refreshedNote">pull requests unavailable, so deleted branches stay unnamed</span>' : '')
@@ -3296,7 +3328,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
         return `<span class="tippill${cls}" data-name="${escapeHtml(name)}" style="border-left:3px solid ${branchColor(name)}"${hint}>${escapeHtml(name)}</span>`;
       }).join('');
       const wait = n.open_pr;
-      const waitChip = wait ? `<a class="prChip waiting" href="${escapeHtml(wait.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(wait.title || '')}">${CLOCK_SVG}PR #${wait.number} waiting${wait.since ? ' ' + relTime(wait.since).replace(/ ago$/, '') : ''}${wait.base ? ' &rarr; ' + escapeHtml(wait.base) : ''}</a>` : '';
+      const waitChip = wait ? `<a class="prChip waiting ${waitTone(wait)}" href="${escapeHtml(wait.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(wait.title || '')}">${CLOCK_SVG}PR #${wait.number} waiting${wait.since ? ' ' + relTime(wait.since).replace(/ ago$/, '') : ''}${wait.base ? ' &rarr; ' + escapeHtml(wait.base) : ''}</a>` : '';
       const prChip = waitChip + (n.pr ? `<a class="prChip" href="${escapeHtml(n.pr.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(n.pr.title || '')}">PR #${n.pr.number}${n.pr.head ? ' &middot; ' + escapeHtml(n.pr.head) : ''}${n.pr.base ? ' &rarr; ' + escapeHtml(n.pr.base) : ''}</a>` : '');
       const hidden = hiddenBelow[n.sha];
       const hiddenTxt = hidden ? hidden.map(h=>`${h} commit${h>1?'s':''} skipped &darr;`).join(', ') : '';
@@ -3738,6 +3770,18 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     return from && byName[from] && byName[repoDef] ? { from, into: repoDef } : null;
   }
   // The button says what is waiting, so the answer is visible without opening anything.
+  const waitBtn = document.getElementById('waitBtn');
+  function syncWaitBtn(){
+    const n = (DATA && DATA.open_prs ? DATA.open_prs : []).length;
+    waitBtn.style.display = n ? '' : 'none';
+    waitBtn.textContent = `Waiting PRs \u00b7 ${n}`;
+    waitBtn.setAttribute('aria-pressed', showWaiting ? 'true' : 'false');
+  }
+  waitBtn.addEventListener('click', ()=>{
+    showWaiting = !showWaiting;
+    try{ localStorage.setItem('ghp_wait_lines', showWaiting ? '1' : '0'); }catch(e){}
+    syncWaitBtn(); redrawLanes();
+  });
   function syncOutBtn(){
     if(!outBtn) return;
     const pair = DATA ? defaultOutPair() : null;
