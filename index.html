@@ -2151,23 +2151,23 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       const mk = (tag, attrs)=>{ const el = document.createElementNS(svgns, tag); for(const k in attrs) el.setAttribute(k, attrs[k]); return el; };
       svg.appendChild(mk('path', { d:`M ${x1} ${y1} C ${x1 + bow} ${ym}, ${x2 + bow} ${ym}, ${x2} ${y2}`, stroke:col,
         'stroke-width': sel ? '3.5' : '2.5', fill:'none', 'stroke-linecap':'round', 'stroke-dasharray':'0.1 6.5', opacity: on ? '0.95' : '0.2' }));
-      // an arrowhead near the end it is heading for, so the direction reads at a glance
-      const p1 = curvePoint(x1, y1, x2, y2, ym, 0.86, bow), p2 = curvePoint(x1, y1, x2, y2, ym, 0.93, bow);
-      const ang = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
-      svg.appendChild(mk('path', { d:'M -5 -4.5 L 5 0 L -5 4.5 Z', fill:col, opacity: on ? '1' : '0.25',
-        transform:`translate(${p2[0]} ${p2[1]}) rotate(${ang})` }));
       if(sel){ // ring the branch it comes from (solid) and the branch it waits to join (double)
         svg.appendChild(mk('circle', { cx:x1, cy:y1, r:9, fill:'none', stroke:col, 'stroke-width':'2' }));
         svg.appendChild(mk('circle', { cx:x2, cy:y2, r:9, fill:'none', stroke:col, 'stroke-width':'2' }));
         svg.appendChild(mk('circle', { cx:x2, cy:y2, r:13, fill:'none', stroke:col, 'stroke-width':'1', opacity:'0.6' }));
       }
       // start at the middle; if another clock is close, slide along the line until there is room
-      let pos = [(x1 + x2) / 2 + bow * 0.75, ym];
+      let pos = [(x1 + x2) / 2 + bow * 0.75, ym], tUsed = 0.5;
       for(const t of [0.5, 0.38, 0.62, 0.28, 0.72, 0.2, 0.8]){
-        pos = curvePoint(x1, y1, x2, y2, ym, t, bow);
+        pos = curvePoint(x1, y1, x2, y2, ym, t, bow); tUsed = t;
         if(clocks.every(c=> Math.hypot(c[0] - pos[0], c[1] - pos[1]) > 22)) break;
       }
       clocks.push(pos);
+      // an arrowhead just past the clock, pointing the way the pull request is going (toward the branch it waits to join)
+      const ahead = curvePoint(x1, y1, x2, y2, ym, Math.min(1, tUsed + 0.02), bow);
+      const dx = ahead[0] - pos[0], dy = ahead[1] - pos[1], len = Math.hypot(dx, dy) || 1;
+      svg.appendChild(mk('path', { d:'M -5 -4.5 L 5 0 L -5 4.5 Z', fill:col, opacity: on ? '1' : '0.25',
+        transform:`translate(${pos[0] + dx / len * 19} ${pos[1] + dy / len * 19}) rotate(${Math.atan2(dy, dx) * 180 / Math.PI})` }));
       const g = mk('g', { transform:`translate(${pos[0]} ${pos[1]})`, opacity: on ? '1' : '0.25', role:'button', tabindex:'0',
         'aria-label':`Pull request #${o.number}: from ${o.head} into ${o.base}. Press for details.` });
       g.style.cursor = 'pointer';
