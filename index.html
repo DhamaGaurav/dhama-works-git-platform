@@ -320,6 +320,8 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .prChip:hover{text-decoration:underline;}
+.prChip.waiting{display:inline-flex; align-items:center; gap:4px; background:var(--warn-soft); color:var(--warn);}
+.prChip .clk{flex:none;}
 /* what's going out */
 .outPick{padding:8px 18px; border-bottom:1px solid var(--border); font-size:11.5px; color:var(--text-3); font-weight:600;}
 .outPick summary{cursor:pointer; color:var(--accent); font-weight:700;}
@@ -1116,7 +1118,7 @@ const GitHub = (function(){
           base: p.base && p.base.ref, headSha: p.head && p.head.sha,
           mergeSha: p.merged_at ? p.merge_commit_sha : null,
           fork, forkOwner: fork && p.head.user ? p.head.user.login : '',
-          mergedAt: p.merged_at, closedAt: p.closed_at,
+          mergedAt: p.merged_at, closedAt: p.closed_at, createdAt: p.created_at,
           state: p.merged_at ? 'merged' : p.state, user: p.user && p.user.login,
         });
       }
@@ -1414,7 +1416,7 @@ const Azure = (function(){
         headSha: p.lastMergeSourceCommit && p.lastMergeSourceCommit.commitId,
         mergeSha: p.status === 'completed' && p.lastMergeCommit ? p.lastMergeCommit.commitId : null,
         fork: !!p.forkSource, forkOwner: '',
-        mergedAt: p.status === 'completed' ? p.closedDate : null, closedAt: p.closedDate || null,
+        mergedAt: p.status === 'completed' ? p.closedDate : null, closedAt: p.closedDate || null, createdAt: p.creationDate,
         url: `${r.baseUrl}/${encodeURIComponent(r.project)}/_git/${encodeURIComponent(r.repo)}/pullrequest/${p.pullRequestId}`,
         state: p.status === 'completed' ? 'merged' : (p.status === 'active' ? 'open' : p.status),
         user: p.createdBy && p.createdBy.displayName,
@@ -1465,7 +1467,7 @@ const Demo = (function(){
     const merged = (n,title,head,sha,merge,user,daysAgo) => ({ number:n, title, url:'', branch:head, base:'develop', headSha:sha,
       mergeSha:merge, fork:false, forkOwner:'', mergedAt:new Date(t0 - daysAgo*DAY).toISOString(), closedAt:null, state:'merged', user });
     const pulls = [
-      { number:5, title:'Dark mode', url:'', branch:'feature/dark-mode', base:'develop', headSha:'f2', mergeSha:null, fork:false, forkOwner:'', mergedAt:null, closedAt:null, state:'open', user:'Farah' },
+      { number:5, title:'Dark mode', url:'', branch:'feature/dark-mode', base:'develop', headSha:'f2', mergeSha:null, fork:false, forkOwner:'', mergedAt:null, closedAt:null, createdAt:new Date(t0 - 9*DAY).toISOString(), state:'open', user:'Farah' },
       merged(4,'Add settings page','feature/settings','e2','s4','Eli',18),
       merged(3,'Add search','feature/search','q2','s3','Dana',23),
       merged(2,'Fix date parsing','feature/date-fix','x1','g2','Chen',29),
@@ -1549,7 +1551,7 @@ const Providers = (function(){
 const MAX_GHOSTS = 50;   // newest merged pull requests whose branch is gone
 const PR_PAGES = 2;      // 200 most recently updated pull requests per load
 const prLite = p => ({ number:p.number, title:p.title, url:p.url, base:p.base, head:p.branch,
-  state:p.state, user:p.user, at:p.mergedAt || p.closedAt || null });
+  state:p.state, user:p.user, at:p.mergedAt || p.closedAt || null, since:p.createdAt || null });
 
 function ghostBranchesFrom(liveBranches, pulls, cap){
   const live = new Set(liveBranches.map(b => b.name));
@@ -1708,6 +1710,17 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     // a branch other than the repo default that pull requests are raised against
     if(b.name !== repoDefault && statByBase[b.name]) b.integration = statByBase[b.name];
   });
+  // Open pull requests whose two ends are both branches that exist: drawn as a dotted line
+  // from the pull request's branch to the branch it is waiting to be merged into.
+  const openPrs = [];
+  uniqueBranches.forEach(b=>{
+    const p = b.pr;
+    if(b.deleted || !p || p.state !== 'open' || !p.base || !byName[p.base] || byName[p.base].tip === b.tip) return;
+    openPrs.push({ number:p.number, title:p.title, url:p.url, user:p.user, since:p.since,
+      head:b.name, base:p.base, headTip:b.tip, baseTip:byName[p.base].tip });
+  });
+  const openPrByTip = {};
+  openPrs.forEach(o=>{ openPrByTip[o.headTip] ||= o; });
 
   // the picture is drawn around the trunk; if it is not there, the repo default, then the newest branch
   defaultBranchName = byName[defaultBranchName] ? defaultBranchName
@@ -2007,6 +2020,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
         refs: refsBySha[sha] || [],
         event: eventBySha[sha] || null,
         pr: prBySha[sha] || null,
+        open_pr: openPrByTip[sha] || null,
         placeholder: !!c.placeholder,
         branch_start: branchStartBySha[sha] || null,
       };
@@ -2068,6 +2082,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     trunk_auto: !!opts.auto,                 // true when the trunk was picked for the user
     integration: baseStats.filter(s => s.name !== repoDefault),
     pull_count: pulls.length,
+    open_prs: openPrs,
     depth_days: opts.depthDays || 0,           // 0 = all history was asked for
     pulls_error: opts.pullsError || '',
     owner_by_sha: ownerBySha,
@@ -2079,6 +2094,34 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
 (function(){
   let LANE_W = 20;
   const LANE_PAD = 14, NODE_R = 4.5, LANE_W_MAX = 20, LANE_W_MIN = 10, LANE_BUDGET = 220;
+  // A pull request that is waiting: a dotted line from its branch's tip to the tip of the
+  // branch it will merge into, with a clock on the line. The clock opens the pull request.
+  const CLOCK_SVG = '<svg class="clk" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 3.2V6l2 1.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  function drawWaiting(rowY){
+    (DATA.open_prs || []).forEach(o=>{
+      const a = nodeBySha[o.headTip], b = nodeBySha[o.baseTip];
+      if(!a || !b) return;
+      const x1 = laneX(a.lane), y1 = rowY(a), x2 = laneX(b.lane), y2 = rowY(b), ym = (y1 + y2) / 2;
+      const on = (!highlightPathSet || highlightPathSet.has(o.headTip)) && authorOk(a);
+      const col = colorForCommit(o.headTip);
+      const line = document.createElementNS(svgns,'path');
+      line.setAttribute('d', `M ${x1} ${y1} C ${x1} ${ym}, ${x2} ${ym}, ${x2} ${y2}`);
+      line.setAttribute('stroke', col); line.setAttribute('stroke-width', '2.5'); line.setAttribute('fill', 'none');
+      line.setAttribute('stroke-linecap', 'round'); line.setAttribute('stroke-dasharray', '0.1 6.5');
+      line.setAttribute('opacity', on ? '0.95' : '0.2');
+      svg.appendChild(line);
+      const g = document.createElementNS(svgns,'g');
+      g.setAttribute('transform', `translate(${(x1 + x2) / 2} ${ym})`);
+      g.setAttribute('opacity', on ? '1' : '0.25');
+      g.style.cursor = o.url ? 'pointer' : 'default';
+      g.innerHTML = `<circle r="9" fill="var(--surface)" stroke="${col}" stroke-width="1.6"/><path d="M0 -4.6V0.2l3.3 2" fill="none" stroke="${col}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const tip = document.createElementNS(svgns,'title');
+      tip.textContent = `Pull request #${o.number}${o.title ? ' "' + o.title + '"' : ''} is waiting to merge into ${o.base}${o.since ? ' (open for ' + relTime(o.since).replace(/ ago$/, '') + ')' : ''}`;
+      g.appendChild(tip);
+      if(o.url) g.addEventListener('click', ()=> window.open(o.url, '_blank', 'noopener'));
+      svg.appendChild(g);
+    });
+  }
   // Colour follows the branch, not the lane: the repo's own default branch is always lane 0's blue,
   // every other name hashes to one of the other nine colours, and no name gives a muted grey.
   function branchColor(name){
@@ -3252,7 +3295,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
         const hint = rb && rb.deleted ? ' title="Deleted after its pull request merged"' : (rb && rb.integration ? ' title="Pull requests are raised against this branch"' : '');
         return `<span class="tippill${cls}" data-name="${escapeHtml(name)}" style="border-left:3px solid ${branchColor(name)}"${hint}>${escapeHtml(name)}</span>`;
       }).join('');
-      const prChip = n.pr ? `<a class="prChip" href="${escapeHtml(n.pr.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(n.pr.title || '')}">PR #${n.pr.number}${n.pr.head ? ' &middot; ' + escapeHtml(n.pr.head) : ''}${n.pr.base ? ' &rarr; ' + escapeHtml(n.pr.base) : ''}</a>` : '';
+      const wait = n.open_pr;
+      const waitChip = wait ? `<a class="prChip waiting" href="${escapeHtml(wait.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(wait.title || '')}">${CLOCK_SVG}PR #${wait.number} waiting${wait.since ? ' ' + relTime(wait.since).replace(/ ago$/, '') : ''}${wait.base ? ' &rarr; ' + escapeHtml(wait.base) : ''}</a>` : '';
+      const prChip = waitChip + (n.pr ? `<a class="prChip" href="${escapeHtml(n.pr.url || '#')}" target="_blank" rel="noopener" title="${escapeHtml(n.pr.title || '')}">PR #${n.pr.number}${n.pr.head ? ' &middot; ' + escapeHtml(n.pr.head) : ''}${n.pr.base ? ' &rarr; ' + escapeHtml(n.pr.base) : ''}</a>` : '');
       const hidden = hiddenBelow[n.sha];
       const hiddenTxt = hidden ? hidden.map(h=>`${h} commit${h>1?'s':''} skipped &darr;`).join(', ') : '';
       const starts = (n.branch_start || []).map(s=>
@@ -3361,6 +3406,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       svg.appendChild(circ);
     });
 
+    drawWaiting(rowY);
     document.getElementById('graphInner').style.minHeight = totalH+'px';
   }
 
