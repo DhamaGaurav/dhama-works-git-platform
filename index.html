@@ -338,6 +338,8 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .wcArrow{margin:0 0 0 41px; font-size:11px; color:var(--text-3);}
 .wcMeta{margin-top:8px; font-size:11px; color:var(--text-3);}
 .wcBtns{display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:10px;}
+.spacing{display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--text-2); flex:none;}
+.spacing input{width:90px; accent-color:var(--accent);}
 .hintBtn[aria-pressed="false"]{background:transparent; color:var(--text-3); border-color:var(--border);}
 .prChip .clk{flex:none;}
 /* what's going out */
@@ -691,6 +693,7 @@ footer.note .mono{color:var(--text-3);}
         <button type="button" class="hintBtn" id="waitBtn" aria-pressed="true" style="display:none;" title="Show or hide the dotted lines for pull requests that are waiting to be merged"></button>
         <button type="button" class="hintBtn" id="outBtn" style="display:none;" title="Work merged into one branch that has not reached the other yet">Not released yet</button>
         <select class="branchHiSelect" id="branchHighlightSelect" title="Fade every commit that is not on this branch. The lines stay where they are; use Center on to redraw around another branch."><option value="">Highlight&hellip;</option></select>
+        <label class="spacing" title="Space between branch lines. Drag to spread the branches apart; the graph scrolls sideways when it gets wide."><span>Spacing</span><input type="range" id="spacingRange" min="10" max="64" step="2"><button type="button" class="linkBtn" id="spacingAuto" style="display:none;">Auto</button></label>
         <select class="branchHiSelect" id="depthSelect" title="How far back to load history. A shorter window loads faster on big repositories; branches whose last commit is older still appear, but their commit counts only cover what is loaded."><option value="0">History: all</option></select>
         <span>click a branch to see its history &middot; click a dot for that commit</span>
         <span class="laneLegend">
@@ -2120,6 +2123,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
 <script>
 (function(){
   let LANE_W = 20;
+  // Space between branch lines, set by the user (0 = automatic: tighter as branches multiply).
+  let laneSpacing = 0;
+  try{ laneSpacing = Number(localStorage.getItem('ghp_lane_spacing')) || 0; }catch(e){}
   const LANE_PAD = 14, NODE_R = 4.5, LANE_W_MAX = 20, LANE_W_MIN = 10, LANE_BUDGET = 220;
   // A pull request that is waiting: a dotted line from its branch's tip to the tip of the
   // branch it will merge into, with a clock on the line. The clock opens the pull request.
@@ -2879,6 +2885,23 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     centerSelect.innerHTML = h;
     centerSelect.classList.toggle('active', chosen !== '__default');
   }
+  const spacingRange = document.getElementById('spacingRange'), spacingAuto = document.getElementById('spacingAuto');
+  function syncSpacing(){
+    if(!spacingRange) return;
+    spacingRange.value = LANE_W;
+    spacingAuto.style.display = laneSpacing > 0 ? '' : 'none';
+  }
+  let spacingFrame = 0;
+  function setSpacing(v){
+    laneSpacing = v;
+    try{ if(v > 0) localStorage.setItem('ghp_lane_spacing', String(v)); else localStorage.removeItem('ghp_lane_spacing'); }catch(e){}
+    cancelAnimationFrame(spacingFrame);
+    spacingFrame = requestAnimationFrame(()=>{ if(DATA) renderGraph(graphMode); });
+  }
+  if(spacingRange){
+    spacingRange.addEventListener('input', ()=> setSpacing(Number(spacingRange.value)));
+    spacingAuto.addEventListener('click', ()=> setSpacing(0));
+  }
   const depthSelect = document.getElementById('depthSelect');
   const DEPTHS = [[0,'History: all'],[365,'History: last 12 months'],[180,'History: last 6 months'],[90,'History: last 90 days'],[30,'History: last 30 days']];
   function renderDepthSelect(){
@@ -3387,7 +3410,8 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     const ds = DATA[mode];
     // Many people means many parallel lanes: tighten the spacing so the lane
     // column stays about LANE_BUDGET px wide (never below LANE_W_MIN).
-    LANE_W = Math.max(LANE_W_MIN, Math.min(LANE_W_MAX, Math.floor(LANE_BUDGET/(ds.max_lane+1))));
+    LANE_W = laneSpacing > 0 ? laneSpacing : Math.max(LANE_W_MIN, Math.min(LANE_W_MAX, Math.floor(LANE_BUDGET/(ds.max_lane+1))));
+    syncSpacing();
     const laneAreaW = (ds.max_lane+1)*LANE_W + LANE_PAD;
     currentDS = ds; currentLaneAreaW = laneAreaW;
     expandedSha = null;
