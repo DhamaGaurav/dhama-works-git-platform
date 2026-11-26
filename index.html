@@ -8,7 +8,7 @@
   --recent:#1B7489; --recent-soft:#DEF1F6;
   --warn:#975B0D; --warn-soft:#FBEBC9;
   --crit:#B83729; --crit-soft:#FBE1DC;
-  --lane0:#2F6FD9; --lane1:#B3389F; --lane2:#E0532F; --lane3:#219AB0; --lane4:#C38611; --lane5:#2F8F5B; --lane6:#3C6FD1; --lane7:#8E5B2E; --lane8:#7F9A1E; --lane9:#C2416B; --dot:rgba(60,40,20,0.10);
+  --lane0:#2F6FD9; --lane1:#B3389F; --lane2:#E0532F; --lane3:#219AB0; --lane4:#C38611; --lane5:#4B6584; --lane6:#7B1FA2; --lane7:#8E5B2E; --lane8:#7F9A1E; --lane9:#C2416B; --dot:rgba(60,40,20,0.10);
   --shadow: 0 1px 2px rgba(60,40,20,0.06), 0 8px 24px -12px rgba(60,40,20,0.18);
   color-scheme: light;
 }
@@ -21,7 +21,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#6BCB94; --lane6:#7FA6F0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#C5B4E3; --lane6:#A56BE0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
     color-scheme: dark;
   }
@@ -34,7 +34,7 @@
     --recent:#5CC0D8; --recent-soft:#16282E;
     --warn:#E8A94A; --warn-soft:#34270F;
     --crit:#F0806F; --crit-soft:#3A1D18;
-    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#6BCB94; --lane6:#7FA6F0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
+    --lane0:#78A9F4; --lane1:#DB78C9; --lane2:#F08A58; --lane3:#52D9C8; --lane4:#E0C85A; --lane5:#C5B4E3; --lane6:#A56BE0; --lane7:#C99467; --lane8:#B6CC5A; --lane9:#EE7FA0; --dot:rgba(243,234,223,0.07);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
   color-scheme: dark;
 }
@@ -2114,9 +2114,9 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
   let showWaiting = true;
   try{ showWaiting = localStorage.getItem('ghp_wait_lines') !== '0'; }catch(e){}
   // point on the line's curve, so clocks can be moved along it
-  function curvePoint(x1, y1, x2, y2, ym, t){
-    const u = 1 - t;
-    return [x1*u*u*u + 3*x1*u*u*t + 3*x2*u*t*t + x2*t*t*t, y1*u*u*u + 3*ym*u*u*t + 3*ym*u*t*t + y2*t*t*t];
+  function curvePoint(x1, y1, x2, y2, ym, t, bow){
+    const u = 1 - t, c1 = x1 + bow, c2 = x2 + bow;
+    return [x1*u*u*u + 3*c1*u*u*t + 3*c2*u*t*t + x2*t*t*t, y1*u*u*u + 3*ym*u*u*t + 3*ym*u*t*t + y2*t*t*t];
   }
   function drawWaiting(rowY){
     if(!showWaiting) return;
@@ -2125,20 +2125,22 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       const a = nodeBySha[o.headTip], b = nodeBySha[o.baseTip];
       if(!a || !b) return;
       const x1 = laneX(a.lane), y1 = rowY(a), x2 = laneX(b.lane), y2 = rowY(b), ym = (y1 + y2) / 2;
+      // both ends in one lane: the dotted line would run right over the real commit line, so it bows to the side
+      const bow = x1 === x2 ? 18 : 0;
       const on = (!highlightPathSet || highlightPathSet.has(o.headTip)) && authorOk(a);
       const tone = waitTone(o);
       const col = tone === 'stale' ? 'var(--crit)' : (tone === 'aging' ? 'var(--warn)' : colorForCommit(o.headTip));
       const line = document.createElementNS(svgns,'path');
-      line.setAttribute('d', `M ${x1} ${y1} C ${x1} ${ym}, ${x2} ${ym}, ${x2} ${y2}`);
+      line.setAttribute('d', `M ${x1} ${y1} C ${x1 + bow} ${ym}, ${x2 + bow} ${ym}, ${x2} ${y2}`);
       line.setAttribute('stroke', col); line.setAttribute('stroke-width', '2.5'); line.setAttribute('fill', 'none');
       line.setAttribute('stroke-linecap', 'round'); line.setAttribute('stroke-dasharray', '0.1 6.5');
       line.setAttribute('opacity', on ? '0.95' : '0.2');
       svg.appendChild(line);
       const g = document.createElementNS(svgns,'g');
       // start at the middle; if another clock is close, slide along the line until there is room
-      let pos = [(x1 + x2) / 2, ym];
+      let pos = [(x1 + x2) / 2 + bow * 0.75, ym];
       for(const t of [0.5, 0.38, 0.62, 0.28, 0.72, 0.2, 0.8]){
-        pos = curvePoint(x1, y1, x2, y2, ym, t);
+        pos = curvePoint(x1, y1, x2, y2, ym, t, bow);
         if(clocks.every(c=> Math.hypot(c[0] - pos[0], c[1] - pos[1]) > 22)) break;
       }
       clocks.push(pos);
