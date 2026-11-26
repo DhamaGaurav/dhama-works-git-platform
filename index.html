@@ -323,6 +323,21 @@ h1{font-size:27px; font-weight:800; letter-spacing:-0.01em; margin:2px 0 0 0;}
 .prChip.waiting{display:inline-flex; align-items:center; gap:4px;}
 .prChip.waiting.aging{background:var(--warn-soft); color:var(--warn);}
 .prChip.waiting.stale{background:var(--crit-soft); color:var(--crit);}
+.waitCard{
+  position:fixed; z-index:70; display:none; width:270px; max-width:86vw;
+  background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+  box-shadow:0 18px 44px -18px rgba(10,12,18,.5); font-size:12px;
+}
+.wcHead{display:flex; align-items:center; justify-content:space-between;}
+.wcNum{font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--accent);}
+.wcX{background:none; border:0; font-size:18px; line-height:1; color:var(--text-3); cursor:pointer; padding:0 2px;}
+.wcTitle{font-size:13px; font-weight:700; margin:4px 0 8px;}
+.wcFlow{display:flex; align-items:center; gap:7px; padding:4px 0;}
+.wcFlow .mono{font-size:12px; word-break:break-all;}
+.wcLbl{width:34px; flex:none; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3);}
+.wcArrow{margin:0 0 0 41px; font-size:11px; color:var(--text-3);}
+.wcMeta{margin-top:8px; font-size:11px; color:var(--text-3);}
+.wcBtns{display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:10px;}
 .hintBtn[aria-pressed="false"]{background:transparent; color:var(--text-3); border-color:var(--border);}
 .prChip .clk{flex:none;}
 /* what's going out */
@@ -2118,6 +2133,8 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     const u = 1 - t, c1 = x1 + bow, c2 = x2 + bow;
     return [x1*u*u*u + 3*c1*u*u*t + 3*c2*u*t*t + x2*t*t*t, y1*u*u*u + 3*ym*u*u*t + 3*ym*u*t*t + y2*t*t*t];
   }
+  // The selected clock's pull request (by number): its line is drawn heavier and both ends are ringed.
+  let selectedWait = null;
   function drawWaiting(rowY){
     if(!showWaiting) return;
     const clocks = []; // where clocks already sit, so that several waiting pull requests never stack theirs
@@ -2127,16 +2144,23 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       const x1 = laneX(a.lane), y1 = rowY(a), x2 = laneX(b.lane), y2 = rowY(b), ym = (y1 + y2) / 2;
       // both ends in one lane: the dotted line would run right over the real commit line, so it bows to the side
       const bow = x1 === x2 ? 18 : 0;
+      const sel = o.number === selectedWait;
       const on = (!highlightPathSet || highlightPathSet.has(o.headTip)) && authorOk(a);
       const tone = waitTone(o);
       const col = tone === 'stale' ? 'var(--crit)' : (tone === 'aging' ? 'var(--warn)' : colorForCommit(o.headTip));
-      const line = document.createElementNS(svgns,'path');
-      line.setAttribute('d', `M ${x1} ${y1} C ${x1 + bow} ${ym}, ${x2 + bow} ${ym}, ${x2} ${y2}`);
-      line.setAttribute('stroke', col); line.setAttribute('stroke-width', '2.5'); line.setAttribute('fill', 'none');
-      line.setAttribute('stroke-linecap', 'round'); line.setAttribute('stroke-dasharray', '0.1 6.5');
-      line.setAttribute('opacity', on ? '0.95' : '0.2');
-      svg.appendChild(line);
-      const g = document.createElementNS(svgns,'g');
+      const mk = (tag, attrs)=>{ const el = document.createElementNS(svgns, tag); for(const k in attrs) el.setAttribute(k, attrs[k]); return el; };
+      svg.appendChild(mk('path', { d:`M ${x1} ${y1} C ${x1 + bow} ${ym}, ${x2 + bow} ${ym}, ${x2} ${y2}`, stroke:col,
+        'stroke-width': sel ? '3.5' : '2.5', fill:'none', 'stroke-linecap':'round', 'stroke-dasharray':'0.1 6.5', opacity: on ? '0.95' : '0.2' }));
+      // an arrowhead near the end it is heading for, so the direction reads at a glance
+      const p1 = curvePoint(x1, y1, x2, y2, ym, 0.86, bow), p2 = curvePoint(x1, y1, x2, y2, ym, 0.93, bow);
+      const ang = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+      svg.appendChild(mk('path', { d:'M -5 -4.5 L 5 0 L -5 4.5 Z', fill:col, opacity: on ? '1' : '0.25',
+        transform:`translate(${p2[0]} ${p2[1]}) rotate(${ang})` }));
+      if(sel){ // ring the branch it comes from (solid) and the branch it waits to join (double)
+        svg.appendChild(mk('circle', { cx:x1, cy:y1, r:9, fill:'none', stroke:col, 'stroke-width':'2' }));
+        svg.appendChild(mk('circle', { cx:x2, cy:y2, r:9, fill:'none', stroke:col, 'stroke-width':'2' }));
+        svg.appendChild(mk('circle', { cx:x2, cy:y2, r:13, fill:'none', stroke:col, 'stroke-width':'1', opacity:'0.6' }));
+      }
       // start at the middle; if another clock is close, slide along the line until there is room
       let pos = [(x1 + x2) / 2 + bow * 0.75, ym];
       for(const t of [0.5, 0.38, 0.62, 0.28, 0.72, 0.2, 0.8]){
@@ -2144,25 +2168,88 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
         if(clocks.every(c=> Math.hypot(c[0] - pos[0], c[1] - pos[1]) > 22)) break;
       }
       clocks.push(pos);
-      g.setAttribute('transform', `translate(${pos[0]} ${pos[1]})`);
-      g.setAttribute('opacity', on ? '1' : '0.25');
-      g.style.cursor = o.url ? 'pointer' : 'default';
-      g.innerHTML = `<circle r="9" fill="var(--surface)" stroke="${col}" stroke-width="1.6"/><path d="M0 -4.6V0.2l3.3 2" fill="none" stroke="${col}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const g = mk('g', { transform:`translate(${pos[0]} ${pos[1]})`, opacity: on ? '1' : '0.25', role:'button', tabindex:'0',
+        'aria-label':`Pull request #${o.number}: from ${o.head} into ${o.base}. Press for details.` });
+      g.style.cursor = 'pointer';
+      g.innerHTML = `<circle r="${sel ? 11 : 9}" fill="var(--surface)" stroke="${col}" stroke-width="${sel ? 2.4 : 1.6}"/><path d="M0 -4.6V0.2l3.3 2" fill="none" stroke="${col}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`;
       const tip = document.createElementNS(svgns,'title');
-      tip.textContent = `Pull request #${o.number}${o.title ? ' "' + o.title + '"' : ''} is waiting to merge into ${o.base}${o.since ? ' (open for ' + relTime(o.since).replace(/ ago$/, '') + ')' : ''}`;
+      tip.textContent = `Pull request #${o.number}${o.title ? ' "' + o.title + '"' : ''}: from ${o.head} into ${o.base}. Click for details.`;
       g.appendChild(tip);
-      if(o.url) g.addEventListener('click', ()=> window.open(o.url, '_blank', 'noopener'));
+      g.addEventListener('click', ev=>{ ev.stopPropagation(); selectWait(o, ev.clientX, ev.clientY); });
+      g.addEventListener('keydown', ev=>{
+        if(ev.key !== 'Enter' && ev.key !== ' ') return;
+        ev.preventDefault();
+        const r = g.getBoundingClientRect(); selectWait(o, r.right, r.top);
+      });
       svg.appendChild(g);
     });
   }
+
+  // The card a clock opens: which branch the pull request comes from, which it waits to join, and who and how long.
+  let waitCard = null;
+  function closeWaitCard(redraw){
+    if(waitCard) waitCard.style.display = 'none';
+    if(selectedWait !== null){ selectedWait = null; if(redraw !== false && DATA) redrawLanes(); }
+  }
+  function selectWait(o, x, y){
+    if(selectedWait === o.number){ closeWaitCard(); return; }
+    selectedWait = o.number;
+    if(!waitCard){
+      waitCard = document.createElement('div');
+      waitCard.className = 'waitCard';
+      waitCard.addEventListener('click', ev=>{
+        ev.stopPropagation();
+        const act = ev.target.closest('[data-act]');
+        if(!act) return;
+        const o2 = (DATA.open_prs || []).find(q=> q.number === selectedWait);
+        if(!o2) return;
+        if(act.dataset.act === 'open' && o2.url) window.open(o2.url, '_blank', 'noopener');
+        if(act.dataset.act === 'show'){ closeWaitCard(false); locateInGraph(o2.headTip); }
+        if(act.dataset.act === 'close') closeWaitCard();
+      });
+      document.body.appendChild(waitCard);
+    }
+    const age = o.since ? relTime(o.since).replace(/ ago$/, '') : '';
+    const sw = name => `<span class="bsw" style="background:${branchColor(name)}"></span><b class="mono">${escapeHtml(name)}</b>`;
+    waitCard.innerHTML = `
+      <div class="wcHead"><span class="wcNum">PR #${o.number}</span><button type="button" class="wcX" data-act="close" aria-label="Close">&times;</button></div>
+      <div class="wcTitle">${escapeHtml(o.title || '')}</div>
+      <div class="wcFlow"><span class="wcLbl">From</span>${sw(o.head)}</div>
+      <div class="wcArrow" aria-hidden="true">&darr; waiting to be merged into</div>
+      <div class="wcFlow"><span class="wcLbl">Into</span>${sw(o.base)}</div>
+      <div class="wcMeta">${o.user ? escapeHtml(o.user) + ' &middot; ' : ''}${age ? 'open for ' + escapeHtml(age) : 'open'}</div>
+      <div class="wcBtns">${o.url ? '<button type="button" class="hintBtn" data-act="open">Open pull request</button>' : ''}<button type="button" class="linkBtn" data-act="show">Show ${escapeHtml(o.head)} in history</button></div>`;
+    waitCard.style.display = 'block';
+    const w = waitCard.offsetWidth, h = waitCard.offsetHeight;
+    waitCard.style.left = Math.max(8, Math.min(innerWidth - w - 8, x + 12)) + 'px';
+    waitCard.style.top = Math.max(8, Math.min(innerHeight - h - 8, y + 12)) + 'px';
+    redrawLanes();
+  }
+  document.addEventListener('click', ()=>{ if(selectedWait !== null) closeWaitCard(); });
+  document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && selectedWait !== null) closeWaitCard(); });
   // Colour follows the branch, not the lane: the repo's own default branch is always lane 0's blue,
   // every other name hashes to one of the other nine colours, and no name gives a muted grey.
+  // Each branch prefers the colour its name hashes to; where two branches in the repo want the same one,
+  // the later name (live branches first, then alphabetical) takes the next free colour, so branches here never share one until there are more than nine.
+  const nameHash = name => { let h = 0; for(let i=0;i<name.length;i++) h = (h * 31 + name.charCodeAt(i)) >>> 0; return h; };
+  let slotFor = null, slotOf = {};
+  function slotsFor(data){
+    if(slotFor === data) return slotOf;
+    slotFor = data; slotOf = {};
+    const def = data.repo_default_branch || data.default_branch, used = new Set();
+    // branches that still exist choose first, so deleted ones are the ones that may share a colour
+    data.branches.filter(b=> b.name !== def).sort((x,y)=> (!!x.deleted - !!y.deleted) || (x.name < y.name ? -1 : 1)).map(b=> b.name).forEach(n=>{
+      let k = nameHash(n) % 9;
+      for(let i = 0; i < 9 && used.has(k); i++) k = (k + 1) % 9;
+      used.add(k); slotOf[n] = k;
+    });
+    return slotOf;
+  }
   function branchColor(name){
     if(!name) return 'var(--text-3)';
-    if(name === ((DATA && (DATA.repo_default_branch || DATA.default_branch)) || '')) return 'var(--lane0)';
-    let h = 0;
-    for(let i=0;i<name.length;i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-    return `var(--lane${1 + h % 9})`;
+    if(DATA && name === (DATA.repo_default_branch || DATA.default_branch)) return 'var(--lane0)';
+    const slot = DATA ? slotsFor(DATA)[name] : undefined;
+    return `var(--lane${1 + (slot === undefined ? nameHash(name) % 9 : slot)})`;
   }
   const colorForCommit = sha => branchColor(DATA && DATA.owner_by_sha && DATA.owner_by_sha[sha]);
   // A line runs straight down lane xv (the lane it was reserved in), with a short S-bend at
@@ -2724,6 +2811,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     closePerson();
     clearCenterState();
     activeFilter = 'all'; graphMode = 'condensed'; authorFilter = new Set(); highlightPathSet = null;
+    closeWaitCard(false);
     branchQuery = ''; showAllOpen = false; showMerged = false; showGone = true;
     const searchEl = document.getElementById('branchSearch'); if(searchEl) searchEl.value = '';
     // must be set before the first render: the graph's clickable lines look branches up by name
