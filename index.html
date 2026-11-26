@@ -2177,6 +2177,7 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
       const g = mk('g', { transform:`translate(${pos[0]} ${pos[1]})`, opacity: on ? '1' : '0.25', role:'button', tabindex:'0',
         'aria-label':`Pull request #${o.number}: from ${o.head} into ${o.base}. Press for details.` });
       g.style.cursor = 'pointer';
+      g.style.pointerEvents = 'all'; // the SVG layer lets clicks through to the rows; the clock must catch its own
       g.innerHTML = `<circle r="${sel ? 11 : 9}" fill="var(--surface)" stroke="${col}" stroke-width="${sel ? 2.4 : 1.6}"/><path d="M0 -4.6V0.2l3.3 2" fill="none" stroke="${col}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`;
       const tip = document.createElementNS(svgns,'title');
       tip.textContent = `Pull request #${o.number}${o.title ? ' "' + o.title + '"' : ''}: from ${o.head} into ${o.base}. Click for details.`;
