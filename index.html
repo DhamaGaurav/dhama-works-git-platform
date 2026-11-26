@@ -3556,6 +3556,17 @@ function buildGraphData(branchesRaw, commitsRaw, defaultBranchName, nowISO, opts
     document.getElementById('graphInner').style.minHeight = totalH+'px';
   }
 
+  // Clicking empty space (not a commit, a line, a dot, a tag or a button) lets go of everything selected:
+  // the highlighted branch path, the highlighted row, an open waiting-PR card and the line label.
+  document.getElementById('graphScroll').addEventListener('click', (ev)=>{
+    if(ev.target.closest('.cbody, .tippill, a, button, select, path, circle, g[role="button"]')) return;
+    if(highlightPathSet) setBranchHighlight('');
+    [...rowsEl.children].forEach(r=> r.classList.remove('hi'));
+    document.querySelectorAll('.bcard.selected').forEach(c=> c.classList.remove('selected'));
+    if(lineTooltip) lineTooltip.style.display = 'none';
+    closeWaitCard();
+  });
+
   rowsEl.addEventListener('click', (ev)=>{
     const pill = ev.target.closest('.tippill');
     if(pill){ openBranchFocus(pill.dataset.name); return; }
